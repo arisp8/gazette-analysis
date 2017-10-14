@@ -5,11 +5,13 @@ db = sqlite3.connect('data/default')
 
 # Takes care of setting up the local SQLite database
 def setup_local_db():
+    # Creates the data folder if not exists
     try:
         os.makedirs('data')
     except OSError as e:
         if e.errno != errno.EEXIST:
             raise
+
     setup_ministries_table()
     setup_ministers_table()
     setup_terms_table()
