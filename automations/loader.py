@@ -2,9 +2,10 @@ import time
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
-import os
+import os, errno
 import os.path
 
+# @todo: Catch a few common exceptions that may appear at some points
 # StaleElementReferenceException - Targetting element after DOM has been rebuilt
 # WebDriverException - When chromedriver is closed
 
@@ -89,7 +90,6 @@ class Loader:
             else:
                 num_start += 200
 
-
             # By default we'll see the first page of results, well.. first
             active_page = 1
 
@@ -135,8 +135,6 @@ class Loader:
                     pages[current_page + 1].click()
                     time.sleep(1)
 
-                    # Wait
-                    # time.sleep(2)
 
     # Renames the downloaded pdfs from document.pdf to a more relevant title
     def renameLatestDownload(self, title, original_name = 'document.pdf'):
@@ -164,6 +162,13 @@ class Loader:
 
     def scrapePdfs(self):
 
+        # Creates the pdfs folder if not exists
+        try:
+            os.makedirs('pdfs')
+        except OSError as e:
+            if e.errno != errno.EEXIST:
+                raise
+        
         year = 2017
         for i in self.__possible_issues:
             self.downloadAllIssues(i, year, self.__source)
