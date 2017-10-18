@@ -1,4 +1,6 @@
 from mmu.db.transaction import TransactionHandler
+
+# Handler class for creating, searching and editing ministers data
 class MinisterHandler(TransactionHandler):
 
     # Default constructor for Ministers
@@ -36,4 +38,3 @@ class MinisterHandler(TransactionHandler):
     def update(self, id, params):
         conditions = {'id' : [id]}
         TransactionHandler.update(self, table='ministers', params=params, conditions=conditions)
-    
