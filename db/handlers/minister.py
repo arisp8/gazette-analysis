@@ -26,3 +26,14 @@ class MinisterHandler(TransactionHandler):
         return TransactionHandler.select_all(self, table='ministers', conditions=conditions,
                                          joins={'terms' : ['INNER', 'ministers.id = terms.minister_id'],
                                                 'ministries' : ['INNER', 'ministries.id = terms.ministry_id']})
+
+    # Creates a new minister
+    def create(self, name, political_party, birthdate):
+        TransactionHandler.insert(self, 'ministers', {'name' : name, 'political_party' : political_party,
+                                                      'birthdate' : birthdate})
+
+    # Updates a minister's information
+    def update(self, id, params):
+        conditions = {'id' : [id]}
+        TransactionHandler.update(self, table='ministers', params=params, conditions=conditions)
+    
