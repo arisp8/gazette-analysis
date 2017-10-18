@@ -57,8 +57,8 @@ def setup_terms_table():
             ministry_id INTEGER,
             date_from INTEGER,
             date_to INTEGER,
-            FOREIGN KEY(minister_id) REFERENCES minister(id),
-            FOREIGN KEY(ministry_id) REFERENCES ministry(id)
+            FOREIGN KEY(minister_id) REFERENCES ministers(id),
+            FOREIGN KEY(ministry_id) REFERENCES ministries(id)
         );
     ''')
 
@@ -88,8 +88,8 @@ def setup_signatures_table():
             minister_id INTEGER,
             fek_id INTEGER,
             data TEXT,
-            FOREIGN KEY(minister_id) REFERENCES minister(id),
-            FOREIGN KEY(fek_id) REFERENCES fek(id)
+            FOREIGN KEY(minister_id) REFERENCES ministers(id),
+            FOREIGN KEY(fek_id) REFERENCES issues(id)
         );
     ''')
 
