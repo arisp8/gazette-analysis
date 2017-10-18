@@ -1,10 +1,14 @@
 import sqlite3
+import os
 
 # This class defines all required transactions for saving, adding and altering entities in an SQLite database
 class TransactionHandler:
 
     def __init__(self, db_name = 'default'):
-        self.__db = sqlite3.connect('../data/' + db_name)
+        self.__db = sqlite3.connect(os.path.dirname(os.path.realpath(__file__)) + '/../data/' + db_name)
+        # Sets the function that turns tuples into key-value dictionaries
+        self.__db.row_factory = self.dict_factory
+
 
     # Builds an INSERT statement for the SQLite database using the parameters specified in params
     # @param table The table
@@ -48,7 +52,7 @@ class TransactionHandler:
         else:
             return "'" + value + "'"
 
-    def format_conditions(self, conditions = None):
+    def format_conditions(self, table, conditions = None):
         formatted_conditions = ""
 
         # The default case with no conditions specified will match everything
@@ -78,7 +82,8 @@ class TransactionHandler:
                 if count == num_conditions - 1:
                     separator = ""
 
-                formatted_conditions += "{} {} {} {}".format(condition_name, operator, condition_value, separator)
+                formatted_conditions += "{table}.{name} {operator} {value} {separator}".format(table= table,
+                    name=condition_name, operator=operator, value=condition_value, separator=separator)
                 count += 1
 
         return formatted_conditions
@@ -105,7 +110,7 @@ class TransactionHandler:
             count += 1
 
         # Formatting the conditions for the UPDATE statement
-        formatted_conditions = self.format_conditions(conditions)
+        formatted_conditions = self.format_conditions(table, conditions)
 
         query = '''
             UPDATE {t}
@@ -125,7 +130,7 @@ class TransactionHandler:
             for join_table in joins:
                 type = joins[join_table][0].upper()
                 on = joins[join_table][1]
-                formatted_joins += "{type} JOIN ON {on}".format(type=type, on=on)
+                formatted_joins += "{type} JOIN {table} ON {on} ".format(type=type, table = join_table, on=on)
 
         return formatted_joins
 
@@ -153,7 +158,7 @@ class TransactionHandler:
                 formatted_columns += columns[-1] + separator
 
         # If no condition is given, we will match everything
-        formatted_conditions = self.format_conditions(conditions)
+        formatted_conditions = self.format_conditions(table, conditions)
         formatted_joins = self.format_joins(joins)
 
 
@@ -164,6 +169,13 @@ class TransactionHandler:
             WHERE {cond}
         '''.format(cols=formatted_columns, t=table,j=formatted_joins,cond=formatted_conditions)
         return query
+
+    # Turns a row into a key : value dictionary from a tuple
+    def dict_factory(self, cursor, row):
+        d = {}
+        for idx, col in enumerate(cursor.description):
+            d[col[0]] = row[idx]
+        return d
 
     # Selects one element that matches given conditions
     def select_one(self, table, columns=None, conditions=None, joins=None):
