@@ -5,8 +5,10 @@ find a way to locate the files from the Content-Desposition header and use urlli
 and rename them in a safe way.
 
 ### Features
-- [ ] Use an SQLite database (to allow local saving without a server) and create a controller to insert, update and
+- [ ] Use an SQLite database (to allow local saving without a server) and create a handler to insert, update and
 delete all needed components (ministers, terms, signatures, files & logs to begin with)
+- [-] Model ministry changes along the way, while somehow tracking what sort of differences there are and which
+ministries are the predecessors of the current one.
 - [ ] Create researcher which will be able to:
 - [-] Find information about all current ministries and ministers
 - [-] Be easily updated when anything is changed
