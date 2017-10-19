@@ -18,7 +18,10 @@ def delete_sqlite_database():
         os.remove('data/default')
         print("SQLite database has been deleted")
     except FileNotFoundError as e:
-        pass
+        print("File has not been found")
+    except PermissionError as e:
+        print("File could not be deleted")
+
 
 
 
@@ -97,8 +100,10 @@ def setup_positions_table(cursor):
             date_to INTEGER NOT NULL, -- UNIX timestamp when the person stopped being in this position
             person_id INTEGER, -- Shows which person's position we're referencing
             ministry_id INTEGER, -- Shows in which ministry this person is
+            cabinet_id INTEGER, -- References the cabinet in which this position was allocated
             FOREIGN KEY(person_id) REFERENCES persons(id),
-            FOREIGN KEY(ministry_id) REFERENCES ministries(id)
+            FOREIGN KEY(ministry_id) REFERENCES ministries(id),
+            FOREIGN KEY(cabinet_id) REFERENCES cabinets(id)
         );
     ''')
 
