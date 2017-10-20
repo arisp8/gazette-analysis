@@ -27,6 +27,13 @@ CREATE TABLE IF NOT EXISTS `persons` (
 	`birthdate`	INTEGER, -- UNIX timestamp of this person's date of birth
 	PRIMARY KEY(`id`)
 );
+CREATE TABLE IF NOT EXISTS `ministry_origins` (
+    type TEXT, -- Shows how a ministry has originated. For example: Merger, Division, Renaming etc.
+    data BLOB, -- Serialized  data further explaining the origin of the ministry. In case of mergers or renaming it
+               -- will store the predecessors for example.
+    ministry_id INTEGER,
+    FOREIGN KEY(ministry_id) REFERENCES ministries(id)
+);
 CREATE TABLE IF NOT EXISTS `ministries` (
 	`id`	INTEGER,
 	`name`	TEXT, -- The Ministry's name, e.g. "Υπουργείο Οικονομικών" (Ministry of Finance)
