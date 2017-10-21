@@ -1,5 +1,7 @@
+from mmu.db.handlers.ministry import MinistryHandler
 import datetime
 import urllib.request, urllib.parse, json, collections
+from bs4 import BeautifulSoup
 
 # Automatically finds information about past & current cabinet formations, ministers etc.
 class Researcher:
@@ -23,8 +25,10 @@ class Researcher:
             self.__year_from = year_from
             self.__year_to = year_to
 
-            # Performs an http request and returns the response
+        # Initialize ministry handler in default database (no arguments)
+        self.__ministry_handler = MinistryHandler()
 
+    # Uses wikipedia's API to perform searches and returns the results from the JSON response as a list
     def wiki_search(self, keyword, limit = 10, lang = 'el'):
         link = "https://{lang}.wikipedia.org/w/api.php?"
         f = {'action' : 'opensearch', 'search' : keyword, 'limit' : limit, 'namespace' : 0,
@@ -32,6 +36,7 @@ class Researcher:
         link = link.format(lang=lang) + urllib.parse.urlencode(f)
         return self.get_url_contents(link, 'json')
 
+    # Performs an http request and returns the response
     def get_url_contents(self, link, content_type=''):
         try:
             with urllib.request.urlopen(link) as url:
@@ -50,18 +55,84 @@ class Researcher:
             print(e)
             return {}
 
+    # Clears text from useless remaining markup elements
+    def clear_text(self, text):
+        text = text.replace("\n", "").replace("\xa0", " ").replace("\xa02", " ")
+        return text
+
+    # Parses the HTML markup and returns useful formatted information
+    def markup_information(self, markup):
+
+        type = ''
+        if not markup:
+            return None
+
+        if markup.find("ul"):
+            type = 'list'
+        elif markup.find("a", {"class": "external"}):
+            type = 'link'
+        else:
+            type = 'text'
+
+        if type == 'text':
+            return self.clear_text(markup.get_text())
+        elif type == 'list':
+            list_items = markup.find("ul").find_all("li")
+            values = []
+            for item in list_items:
+                values.append(self.clear_text(item.get_text()))
+
+            return values
+
+        elif type == 'link':
+            anchor = markup.find("a")
+            text = anchor.get_text()
+            url = anchor.get('href')
+
+            return {"text": text, "url": url}
+
+    # Returns formatted information fetched from the table on the top right of wikipedia articles
+    def wiki_article_info(self, link):
+        html = self.get_url_contents(link)
+        soup = BeautifulSoup(html, 'html.parser')
+        table_rows = soup.find("table", {"class": "infobox"}).find_all("tr")
+
+        information = {}
+
+        for row in table_rows:
+            if row.th:
+                # @todo: Create function for the formatting
+                header = self.clear_text(row.th.get_text()).lower()
+                raw_value = row.td
+
+                value = self.markup_information(raw_value)
+
+                information[header] = value
+
+        return information
+
+    # Researches and saves ministries in specific
+    def research_ministries(self):
+        ministries_wiki = self.wiki_search(keyword='Υπουργείο', limit=75)
+
+        # Article titles that are irrelevant
+        ignore_titles = ['Υπουργείο' ,'Υπουργείο Παιδείας και Πολιτισμού της Κύπρου', 'Υπουργείο Άμυνας των ΗΠΑ',
+                        'Υπουργείο Εσωτερικών (Κύπρος)', 'Υπουργείο Εσωτερικής Ασφάλειας των ΗΠΑ']
+
+
+        for key, ministry_name in enumerate(ministries_wiki[1]):
+            if ministry_name not in ignore_titles:
+                ministry_description = ministries_wiki[2][key]
+                wiki_link = ministries_wiki[3][key]
+
+                print(ministry_name)
+                print(ministry_description)
+                print(wiki_link)
+                print("\n\n")
+
+                ministry_info = self.wiki_article_info(wiki_link)
+                print(ministry_info)
+
+    # Starts the research process
     def research(self):
-        # The year the researcher will start looking for. Note that
-        current_year = self.__year_from
-        cabinet_results = self.wiki_search(keyword='Κυβέρνηση', limit=50)
-
-
-        while current_year <= self.__year_to:
-            for key, cabinet in enumerate(cabinet_results[1]):
-                if str(current_year) in cabinet:
-                    title = cabinet
-                    description = cabinet_results[2][key]
-                    link = cabinet_results[3][key]
-                    print(link)
-
-            current_year += 1
+        self.research_ministries()
