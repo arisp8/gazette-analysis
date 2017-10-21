@@ -28,15 +28,17 @@ CREATE TABLE IF NOT EXISTS `persons` (
 	PRIMARY KEY(`id`)
 );
 CREATE TABLE IF NOT EXISTS `ministry_origins` (
-    type TEXT, -- Shows how a ministry has originated. For example: Merger, Division, Renaming etc.
-    data BLOB, -- Serialized  data further explaining the origin of the ministry. In case of mergers or renaming it
+    `type` TEXT, -- Shows how a ministry has originated. For example: Merger, Division, Renaming etc.
+    `data` BLOB, -- Serialized  data further explaining the origin of the ministry. In case of mergers or renaming it
                -- will store the predecessors for example.
-    ministry_id INTEGER,
-    FOREIGN KEY(ministry_id) REFERENCES ministries(id)
+    `ministry_id` INTEGER,
+    FOREIGN KEY(`ministry_id`) REFERENCES `ministries`(`id`)
 );
 CREATE TABLE IF NOT EXISTS `ministries` (
-	`id`	INTEGER,
+	`id` INTEGER,
 	`name`	TEXT, -- The Ministry's name, e.g. "Υπουργείο Οικονομικών" (Ministry of Finance)
+	`established` INT, -- UNIX timestamp noting when this ministry was established
+	`disbanded` INT, -- UNIX timestamp noting when this ministry was disbanded (if it hasn't then it should store 0)
 	PRIMARY KEY(`id`)
 );
 CREATE TABLE IF NOT EXISTS `issues` (
