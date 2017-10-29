@@ -35,7 +35,6 @@ class TransactionHandler:
             INSERT INTO {t} ({c}) 
             VALUES({v})
         '''.format(t=table, c=columns, v=values)
-
         cursor.execute(query, params)
         self.__db.commit()
 
@@ -53,18 +52,16 @@ class TransactionHandler:
             return "'" + value + "'"
 
     def format_conditions(self, table, conditions = None):
-        formatted_conditions = ""
+        formatted_conditions = "WHERE "
 
         # The default case with no conditions specified will match everything
-        # @TODO: Benchmark and see if WHERE 1 = 1 costs time, if yes remove the WHERE clause when 0 conditions are given
         if not conditions:
-            formatted_conditions = "1 = 1"
+            formatted_conditions = ""
         else:
             count = 0
             num_conditions = len(conditions)
 
             for condition_name in conditions:
-
                 condition_value = self.format_value(conditions[condition_name][0])
 
                 # Default separator of none given is AND
@@ -115,7 +112,7 @@ class TransactionHandler:
         query = '''
             UPDATE {t}
             SET {v} 
-            WHERE {c}
+            {c}
         '''.format(t=table, v=values, c=formatted_conditions)
         cursor.execute(query)
 
@@ -166,7 +163,7 @@ class TransactionHandler:
             SELECT {cols} 
             FROM {t} 
             {j} 
-            WHERE {cond}
+            {cond}
         '''.format(cols=formatted_columns, t=table,j=formatted_joins,cond=formatted_conditions)
         return query
 
@@ -189,7 +186,6 @@ class TransactionHandler:
     def select_many(self, table, columns=None, conditions=None, joins=None, limit = 1):
         cursor = self.__db.cursor()
         query = self.select_query(table, columns, conditions, joins)
-        print(query)
         cursor.execute(query)
         return cursor.fetchmany(limit)
 
