@@ -1,6 +1,7 @@
 from mmu.db.handlers.ministry import MinistryHandler
 import datetime
 import urllib.request, urllib.parse, json, collections
+import re
 from bs4 import BeautifulSoup
 
 # Automatically finds information about past & current cabinet formations, ministers etc.
@@ -95,7 +96,13 @@ class Researcher:
     def wiki_article_info(self, link):
         html = self.get_url_contents(link)
         soup = BeautifulSoup(html, 'html.parser')
-        table_rows = soup.find("table", {"class": "infobox"}).find_all("tr")
+        table = soup.find("table", {"class": "infobox"})
+
+        try:
+            table_rows = table.find_all("tr")
+        except AttributeError as e:
+            print("The information table wasn't found. Additional info: " + str(e))
+            return {}
 
         information = {}
 
@@ -107,9 +114,73 @@ class Researcher:
 
                 value = self.markup_information(raw_value)
 
-                information[header] = value
+                # Make sure value is not None
+                if value:
+                    information[header] = value
 
         return information
+
+    # Converts a date to a unix timestamp
+    def date_to_unix_timestamp(self, date, lang = 'el'):
+        if lang == 'el':
+            d = 0
+            m = 1
+            y = 2
+            months = {'Ιανουαρίου' : 1, 'Φεβρουαρίου' : 2, 'Μαρτίου' : 3, 'Απριλίου' : 4, 'Μαΐου' : 5, 'Ιουνίου' : 6,
+                      'Ιουλίου' : 7, 'Αυγούστου' : 8, 'Σεπτεμβρίου' : 9, 'Οκτωβρίου' : 10, 'Νοεμβρίου' : 11,
+                      'Δεκεμβρίου' : 12}
+            text_month = False
+            separator = " "
+            pattern = "Α-Ωα-ωί"
+
+        if re.match('[0-9]{1,2} [' + pattern + ']{1,} [0-9]{,4}', date):
+            separator = " "
+            text_month = True
+        elif re.match('[0-9]{1,2}-[0-9]{1,2}-[0-9]{,4}', date):
+            separator = "-"
+        elif re.match('[0-9]{1,2}/[0-9]{1,2}/[0-9]{,4}', date):
+            separator = "/"
+        elif re.match('[0-9]{,4}', date):
+            return datetime.datetime(year=int(date), month=1, day=1)
+
+        parts = date.split(separator)
+        print(parts)
+
+        if d < len(parts):
+            day = parts[d]
+        else:
+            day = 1
+
+        if m < len(parts) and text_month:
+            month = months[parts[m]]
+        elif m in parts:
+            month = parts[m]
+        else:
+            month = 1
+
+        if y < len(parts):
+            year = parts[y]
+        else:
+            year = 1970
+
+        formatted_date = str(day) + "/" + str(month) + "/" + str(year)
+        return datetime.datetime(year=int(year), month=int(month), day=int(day))
+
+    # Creates new records for the ministries that we don't have saved
+    def save_ministry(self, name, description, params):
+        established = 0
+        disbanded = 0
+
+        if 'σύσταση' in params:
+            established = self.date_to_unix_timestamp(params['σύσταση'])
+
+        if 'κατάργηση' in params:
+            disbanded = self.date_to_unix_timestamp(params['κατάργηση'])
+
+        ministry = self.__ministry_handler.load_by_name(name)
+        print(ministry)
+        if not ministry:
+            self.__ministry_handler.create(name, description, established, disbanded)
 
     # Researches and saves ministries in specific
     def research_ministries(self):
@@ -125,13 +196,10 @@ class Researcher:
                 ministry_description = ministries_wiki[2][key]
                 wiki_link = ministries_wiki[3][key]
 
-                print(ministry_name)
-                print(ministry_description)
-                print(wiki_link)
-                print("\n\n")
-
                 ministry_info = self.wiki_article_info(wiki_link)
-                print(ministry_info)
+
+                self.save_ministry(ministry_name, ministry_description, ministry_info)
+
 
     # Starts the research process
     def research(self):
