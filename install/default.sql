@@ -37,6 +37,7 @@ CREATE TABLE IF NOT EXISTS `ministry_origins` (
 CREATE TABLE IF NOT EXISTS `ministries` (
 	`id` INTEGER,
 	`name`	TEXT, -- The Ministry's name, e.g. "Υπουργείο Οικονομικών" (Ministry of Finance)
+	`description` TEXT, -- A short description of the ministry
 	`established` INT, -- UNIX timestamp noting when this ministry was established
 	`disbanded` INT, -- UNIX timestamp noting when this ministry was disbanded (if it hasn't then it should store 0)
 	PRIMARY KEY(`id`)
