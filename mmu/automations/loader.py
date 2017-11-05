@@ -13,18 +13,18 @@ class Loader:
 
     __source = ""
     # Holds the id's of the issues that may appear on the search page
-    __possible_issues = range(0,16)
+    __possible_issues = range(1,16)
     __driver = None
 
     def __init__(self, source):
         self.__source = source
 
-        # @todo: Replace hard paths with relative paths and make sure that all needed stuff is downloaded in setup
 
         chromeOptions = webdriver.ChromeOptions()
-        prefs = {"download.default_directory": r"C:\Users\user\PycharmProjects\Mixed Up Ministries\mmu\pdfs"}
+        prefs = {"download.default_directory": os.getcwd() + "\pdfs"}
         chromeOptions.add_experimental_option("prefs", prefs)
 
+        # @todo: Replace hard paths with relative paths and make sure that all needed stuff is downloaded in setup
         self.__driver = webdriver.Chrome(r"C:\Users\user\Documents\Aris\chromedriver.exe", chrome_options=chromeOptions)
 
     def file_exists(self, directory, file_name, file_extension = 'pdf'):
