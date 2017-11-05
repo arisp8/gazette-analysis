@@ -25,7 +25,7 @@ def delete_sqlite_database():
 
 # Takes care of setting up the local SQLite database
 def setup_local_db():
-    db = sqlite3.connect('data/default')
+    db = sqlite3.connect('../mmu/data/default')
     cursor = db.cursor()
     # Creates the data folder if not exists
     try:
@@ -35,7 +35,7 @@ def setup_local_db():
             raise
 
     # Executes the default.sql to create default database schema
-    install_sql = open('install/default.sql', 'r', encoding='utf8').read()
+    install_sql = open('../install/default.sql', 'r', encoding='utf8').read()
     cursor.executescript(install_sql)
 
     db.commit()
