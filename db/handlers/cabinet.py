@@ -16,3 +16,8 @@ class CabinetHandler(TransactionHandler):
     def update(self, id, params):
         conditions = {'id' : [id]}
         TransactionHandler.update(self, table='cabinets', params=params, conditions=conditions)
+
+    # Loads a cabinet by title
+    def load_by_title(self, title):
+        conditions = {'title' : [title]}
+        return TransactionHandler.select_one(self, table='cabinets', conditions=conditions)
