@@ -273,5 +273,5 @@ class Researcher:
 
     # Starts the research process
     def research(self):
-        # self.research_ministries()
-        # self.research_cabinets()
+        self.research_ministries()
+        self.research_cabinets()
