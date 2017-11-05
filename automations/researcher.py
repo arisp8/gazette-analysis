@@ -1,4 +1,5 @@
 from mmu.db.handlers.ministry import MinistryHandler
+from mmu.db.handlers.cabinet import CabinetHandler
 import datetime
 import urllib.request, urllib.parse, json, collections
 import re
@@ -26,8 +27,9 @@ class Researcher:
             self.__year_from = year_from
             self.__year_to = year_to
 
-        # Initialize ministry handler in default database (no arguments)
+        # Initialize ministry & cabinet handler in default database (no arguments)
         self.__ministry_handler = MinistryHandler()
+        self.__cabinet_handler = CabinetHandler()
 
     # Uses wikipedia's API to perform searches and returns the results from the JSON response as a list
     def wiki_search(self, keyword, limit = 10, lang = 'el'):
@@ -93,7 +95,7 @@ class Researcher:
             return {"text": text, "url": url}
 
     # Returns formatted information fetched from the table on the top right of wikipedia articles
-    def wiki_article_info(self, link):
+    def wiki_synopsis_info(self, link):
         html = self.get_url_contents(link)
         soup = BeautifulSoup(html, 'html.parser')
         table = soup.find("table", {"class": "infobox"})
@@ -120,7 +122,28 @@ class Researcher:
 
         return information
 
-    # Converts a date to a unix timestamp
+    def wiki_article_info(self, link):
+        html = self.get_url_contents(link)
+        soup = BeautifulSoup(html, 'html.parser')
+        tables = soup.find("div", {"id": "mw-content-text"}).find_all('table')
+
+        for table in tables:
+            rows = table.find_all('tr')
+
+            try:
+                ths = rows[0].find_all('th')
+                headers = []
+                for th in ths:
+                    headers.append(th.get_text())
+            except AttributeError:
+                print("The table doesn't fit the format we're looking for")
+
+            if not headers:
+                continue
+
+            print(headers)
+
+    # Converts a textual date to a unix timestamp
     def date_to_unix_timestamp(self, date, lang = 'el'):
         if lang == 'el':
             d = 0
@@ -131,16 +154,16 @@ class Researcher:
                       'Δεκεμβρίου' : 12}
             text_month = False
             separator = " "
-            pattern = "Α-Ωα-ωί"
+            pattern = "Α-Ωα-ωά-ώ"
 
-        if re.match('[0-9]{1,2} [' + pattern + ']{1,} [0-9]{,4}', date):
+        if re.match('[0-9]{1,2} [' + pattern + ']{1,} [0-9]{4,4}', date):
             separator = " "
             text_month = True
         elif re.match('[0-9]{1,2}-[0-9]{1,2}-[0-9]{,4}', date):
             separator = "-"
         elif re.match('[0-9]{1,2}/[0-9]{1,2}/[0-9]{,4}', date):
             separator = "/"
-        elif re.match('[0-9]{,4}', date):
+        elif re.match('[0-9]{4,4}', date):
             return datetime.datetime(year=int(date), month=1, day=1)
 
         parts = date.split(separator)
@@ -182,7 +205,26 @@ class Researcher:
         if not ministry:
             self.__ministry_handler.create(name, description, established, disbanded)
 
+    def save_cabinet(self, title, description, params):
+
+        date_from = 0
+        date_to = 0
+
+        if 'ημερομηνία σχηματισμού' in params:
+            date_from = self.date_to_unix_timestamp(params['ημερομηνία σχηματισμού'])
+
+        if 'ημερομηνία διάλυσης' in params:
+            date_to = self.date_to_unix_timestamp(params['ημερομηνία διάλυσης'])
+
+        cabinet  = self.__cabinet_handler.load_by_title(title)
+
+        if not cabinet:
+            self.__cabinet_handler.create(title, description, date_from, date_to)
+
+
+
     # Researches and saves ministries in specific
+    # @todo: Use extra information to fill the ministry origins table
     def research_ministries(self):
         ministries_wiki = self.wiki_search(keyword='Υπουργείο', limit=75)
 
@@ -196,11 +238,40 @@ class Researcher:
                 ministry_description = ministries_wiki[2][key]
                 wiki_link = ministries_wiki[3][key]
 
-                ministry_info = self.wiki_article_info(wiki_link)
+                ministry_info = self.wiki_synopsis_info(wiki_link)
 
                 self.save_ministry(ministry_name, ministry_description, ministry_info)
 
+    # Researches and saves information about cabinets
+    def research_cabinets(self):
+        # We find the current cabinet from the official government's website
+        # current_cabinet_link = "https://government.gov.gr/kivernisi/"
+
+
+
+        # Research previous cabinet from wikipedia since I couldn't find information elsewhere
+        cabinets_wiki = self.wiki_search(keyword='Κυβέρνηση', limit=75)
+
+        # Article titles that are irrelevant
+        ignore_titles = ['Κυβέρνηση', 'Κυβέρνηση της Ελλάδας', 'Κυβέρνηση εθνικής σωτηρίας Μίλαν Νέντιτς 1941',
+                         'Κυβέρνηση της Καταλονίας', 'Κυβέρνηση Μανουέλ Βαλλς', 'Κυβέρνηση του Καΐρου',
+                         'Κυβέρνηση Εθνικής Αμύνης', 'Κυβέρνηση Καποδίστρια', 'Κυβέρνηση της Τσεχικής Δημοκρατίας',
+                         'Κυβέρνηση του Ηνωμένου Βασιλείου Ντέιβιντ Κάμερον 2010', 'Κυβέρνηση Μίλαν Ατσίμοβιτς 1941',
+                         'Κυβέρνηση του Ηνωμένου Βασιλείου', 'Κυβέρνηση Νίκου Αναστασιάδη 2013']
+        #
+        for key, cabinet_name in enumerate(cabinets_wiki[1]):
+            if cabinet_name not in ignore_titles:
+                cabinet_description = cabinets_wiki[2][key]
+                wiki_link = cabinets_wiki[3][key]
+
+                # cabinet_details = self.wiki_article_info(wiki_link)
+                cabinet_info = self.wiki_synopsis_info(wiki_link)
+
+                print(cabinet_info)
+
+                self.save_cabinet(cabinet_name, cabinet_description, cabinet_info)
 
     # Starts the research process
     def research(self):
-        self.research_ministries()
+        # self.research_ministries()
+        # self.research_cabinets()
