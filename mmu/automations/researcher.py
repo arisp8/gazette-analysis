@@ -1,5 +1,6 @@
 from mmu.db.handlers.ministry import MinistryHandler
 from mmu.db.handlers.cabinet import CabinetHandler
+from mmu.db.handlers.person import PersonHandler
 import datetime
 import urllib.request, urllib.parse, json, collections
 import re
@@ -30,6 +31,7 @@ class Researcher:
         # Initialize ministry & cabinet handler in default database (no arguments)
         self.__ministry_handler = MinistryHandler()
         self.__cabinet_handler = CabinetHandler()
+        self.__person_handler = PersonHandler()
 
     # Uses wikipedia's API to perform searches and returns the results from the JSON response as a list
     def wiki_search(self, keyword, limit = 10, lang = 'el'):
@@ -122,13 +124,18 @@ class Researcher:
 
         return information
 
+    # Parses a wikipedia article's tables and returns all relevant information
     def wiki_article_info(self, link):
         html = self.get_url_contents(link)
         soup = BeautifulSoup(html, 'html.parser')
-        tables = soup.find("div", {"id": "mw-content-text"}).find_all('table')
+        tables = soup.find("div", {"id": "mw-content-text"}).find_all('table', {'class' : 'wikitable'})
+        tables_info = []
 
         for table in tables:
+
             rows = table.find_all('tr')
+            headers = []
+            current_table_values = []
 
             try:
                 ths = rows[0].find_all('th')
@@ -141,7 +148,18 @@ class Researcher:
             if not headers:
                 continue
 
-            print(headers)
+            for row in rows[1:]:
+                tds = row.find_all('td')
+                cell_values = {}
+
+                for key, td in enumerate(tds):
+                    cell_values[headers[key]] = td.get_text()
+
+                current_table_values.append(cell_values)
+
+            tables_info.append(current_table_values)
+
+        return tables_info
 
     # Converts a textual date to a unix timestamp
     def date_to_unix_timestamp(self, date, lang = 'el'):
@@ -151,7 +169,7 @@ class Researcher:
             y = 2
             months = {'Ιανουαρίου' : 1, 'Φεβρουαρίου' : 2, 'Μαρτίου' : 3, 'Απριλίου' : 4, 'Μαΐου' : 5, 'Ιουνίου' : 6,
                       'Ιουλίου' : 7, 'Αυγούστου' : 8, 'Σεπτεμβρίου' : 9, 'Οκτωβρίου' : 10, 'Νοεμβρίου' : 11,
-                      'Δεκεμβρίου' : 12}
+                      'Δεκεμβρίου' : 12, 'Μαίου': 5}
             text_month = False
             separator = " "
             pattern = "Α-Ωα-ωά-ώ"
@@ -165,6 +183,8 @@ class Researcher:
             separator = "/"
         elif re.match('[0-9]{4,4}', date):
             return datetime.datetime(year=int(date), month=1, day=1)
+        else:
+            return 0
 
         parts = date.split(separator)
         print(parts)
@@ -184,9 +204,8 @@ class Researcher:
         if y < len(parts):
             year = parts[y]
         else:
-            year = 1970
+            return 0
 
-        formatted_date = str(day) + "/" + str(month) + "/" + str(year)
         return datetime.datetime(year=int(year), month=int(month), day=int(day))
 
     # Creates new records for the ministries that we don't have saved
@@ -263,15 +282,82 @@ class Researcher:
             if cabinet_name not in ignore_titles:
                 cabinet_description = cabinets_wiki[2][key]
                 wiki_link = cabinets_wiki[3][key]
-
-                # cabinet_details = self.wiki_article_info(wiki_link)
                 cabinet_info = self.wiki_synopsis_info(wiki_link)
-
-                print(cabinet_info)
 
                 self.save_cabinet(cabinet_name, cabinet_description, cabinet_info)
 
+    # Researches and saves information about people and their positions
+    def research_positions(self):
+        ministries = self.__ministry_handler.load_all()
+
+        for ministry in ministries:
+            ministry_id = ministry['id']
+            ministry_name = ministry['name']
+
+            ministry_search = self.wiki_search(ministry_name, 1)
+            link =  ministry_search[3][0]
+
+            info = self.wiki_article_info(link)
+
+            print('--------------MINISTRY NAME: ' + ministry_name + '--------------------')
+            for table in info:
+                # Make sure this table contains people
+                first_row = table[0]
+                if 'Όνομα' in first_row or 'Ονοματεπώνυμο' in first_row:
+                    for row in table:
+
+                        if 'Ονοματεπώνυμο' in first_row:
+                            name = row['Ονοματεπώνυμο']
+                        elif 'Όνομα' in first_row:
+                            name = row['Όνομα']
+
+                        date_from = 0
+                        date_to = 0
+                        cabinet_title = ""
+                        cabinet_id = None
+
+                        if 'Έναρξη Θητείας' in row:
+                            date_from = self.date_to_unix_timestamp(row['Έναρξη Θητείας'])
+
+                        if 'Λήξη Θητείας' in row:
+                            date_to = self.date_to_unix_timestamp(row['Λήξη Θητείας'])
+
+                        if 'Κυβέρνηση' in row:
+                            cabinet_title = row['Κυβέρνηση']
+                            cabinet = self.__cabinet_handler.load_by_title(cabinet_title)
+                            if cabinet:
+                                cabinet_id = cabinet['id']
+
+                        person = self.__person_handler.load_by_name(name)
+
+                        if not person:
+                            self.research_person(name)
+                            person = self.__person_handler.load_by_name(name)
+
+                        person_id = person['id']
+                        role = 'Υπουργός'
+
+                        position = self.__person_handler.load_position({'person_id' : [person_id],
+                                                                        'ministry_id' : [ministry_id],
+                                                                        'date_from' : [date_from],
+                                                                        'role' : [role]})
+
+                        if not position and date_from != 0:
+                            self.__person_handler.save_position(role, date_from, date_to, person_id,
+                                                                ministry_id, cabinet_id)
+
+    # Finds information from wikipedia (if available) on a person given his name
+    def research_person(self, name):
+        # For now on just saves a person's name without doing any additional research
+        # @todo: Find people's political party and birthdate
+
+        # Make sure to avoid duplicate saving
+        person = self.__person_handler.load_by_name(name)
+        if not person:
+            self.__person_handler.create(name, "", 0)
+
     # Starts the research process
     def research(self):
-        self.research_ministries()
-        self.research_cabinets()
+        # self.research_ministries()
+        # self.research_cabinets()
+        self.research_positions()
