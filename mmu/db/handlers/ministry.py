@@ -21,3 +21,7 @@ class MinistryHandler(TransactionHandler):
     def load_by_name(self, name):
         conditions = {'name' : [name]}
         return TransactionHandler.select_one(self, 'ministries', conditions=conditions)
+
+    # Loads all ministries
+    def load_all(self):
+        return TransactionHandler.select_all(self, 'ministries')
