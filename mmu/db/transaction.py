@@ -44,12 +44,15 @@ class TransactionHandler:
             return True
         except ValueError:
             return False
+        except TypeError:
+            return False
 
     def format_value(self, value):
+
         if self.is_number(value):
             return value
         else:
-            return "'" + value + "'"
+            return "'" + str(value) + "'"
 
     def format_conditions(self, table, conditions = None):
         formatted_conditions = "WHERE "
@@ -165,6 +168,7 @@ class TransactionHandler:
             {j} 
             {cond}
         '''.format(cols=formatted_columns, t=table,j=formatted_joins,cond=formatted_conditions)
+
         return query
 
     # Turns a row into a key : value dictionary from a tuple
