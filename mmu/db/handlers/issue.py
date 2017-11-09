@@ -15,3 +15,7 @@ class IssueHandler(TransactionHandler):
     def load_by_title(self, title):
         conditions = {'title' : [title]}
         return TransactionHandler.select_one(self, table='issues', conditions=conditions)
+
+    # Loads all issues
+    def load_all(self):
+        return TransactionHandler.select_all(self, table='issues')
