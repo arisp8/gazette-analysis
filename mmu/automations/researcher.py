@@ -1,6 +1,7 @@
 from mmu.db.handlers.ministry import MinistryHandler
 from mmu.db.handlers.cabinet import CabinetHandler
 from mmu.db.handlers.person import PersonHandler
+from mmu.utility.helper import Helper
 import datetime
 import urllib.request, urllib.parse, json, collections
 import re
@@ -32,6 +33,9 @@ class Researcher:
         self.__ministry_handler = MinistryHandler()
         self.__cabinet_handler = CabinetHandler()
         self.__person_handler = PersonHandler()
+
+        # Helper class for utility and formatting functions
+        self.__helper = Helper()
 
     # Uses wikipedia's API to perform searches and returns the results from the JSON response as a list
     def wiki_search(self, keyword, limit = 10, lang = 'el'):
@@ -364,10 +368,12 @@ class Researcher:
         # For now on just saves a person's name without doing any additional research
         # @todo: Find people's political party and birthdate
 
+        normalized_name = self.__helper.normalize_greek_name(name)
+
         # Make sure to avoid duplicate saving
-        person = self.__person_handler.load_by_name(name)
+        person = self.__person_handler.load_by_name(normalized_name)
         if not person:
-            self.__person_handler.create(name, "", 0)
+            self.__person_handler.create(normalized_name, "", 0)
 
     # Starts the research process
     def research(self):
