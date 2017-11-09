@@ -315,7 +315,6 @@ class Researcher:
                 else:
                     continue
 
-                print(table)
                 if 'Όνομα' in first_row or 'Ονοματεπώνυμο' in first_row or 'Υπουργός' in first_row:
                     for row in table:
 
@@ -328,6 +327,7 @@ class Researcher:
                         else:
                             continue
 
+                        name = self.__helper.normalize_greek_name(name)
                         date_from = 0
                         date_to = 0
                         cabinet_title = ""
