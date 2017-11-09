@@ -36,7 +36,7 @@ class Loader:
     def file_exists(self, directory, file_name, file_extension = 'pdf'):
         return os.path.isfile(os.getcwd() + "\\" + directory + "\\" + file_name + '.' + file_extension)
 
-    def downloadAllIssues(self, type, year):
+    def download_all_issues(self, type, year):
 
         driver = self.__driver
         driver.get(self.__source)
@@ -135,7 +135,7 @@ class Loader:
                             driver.find_element_by_tag_name("body").send_keys(Keys.CONTROL + 'w')
 
                             # Renames document.pdf to a relevant title
-                            issue_file = self.renameLatestDownload(issue_title)
+                            issue_file = self.rename_latest_download(issue_title)
 
                             # If renaming was successful we log the download to the db
                             if issue_file:
@@ -157,7 +157,7 @@ class Loader:
 
 
     # Renames the downloaded pdfs from document.pdf to a more relevant title
-    def renameLatestDownload(self, title, original_name = 'document.pdf'):
+    def rename_latest_download(self, title, original_name = 'document.pdf'):
         directory = os.getcwd()
         original = directory + '\\pdfs\\' + original_name
         destination = directory + '\\pdfs\\' + title + '.pdf'
@@ -187,7 +187,7 @@ class Loader:
         else:
             return False
 
-    def scrapePdfs(self):
+    def scrape_pdfs(self):
 
         # Creates the pdfs folder if not exists
         try:
@@ -198,4 +198,4 @@ class Loader:
         
         year = 2017
         for i in self.__possible_issues:
-            self.downloadAllIssues(i, year)
+            self.download_all_issues(i, year)
