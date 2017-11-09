@@ -54,7 +54,7 @@ class Loader:
         # Checks the box for this certain type of issues
         driver.find_element_by_name("chbIssue_" + str(type)).click()
 
-        issue_type = driver.find_element_by_id("label-issue-id- " + str(type))
+        issue_type = driver.find_element_by_id("label-issue-id-" + str(type))
 
         while additional_issues:
 
