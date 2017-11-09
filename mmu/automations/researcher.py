@@ -128,7 +128,7 @@ class Researcher:
     def wiki_article_info(self, link):
         html = self.get_url_contents(link)
         soup = BeautifulSoup(html, 'html.parser')
-        tables = soup.find("div", {"id": "mw-content-text"}).find_all('table', {'class' : 'wikitable'})
+        tables = soup.find("div", {"id": "mw-content-text"}).find_all('table')
         tables_info = []
 
         for table in tables:
@@ -150,16 +150,21 @@ class Researcher:
 
             for row in rows[1:]:
                 tds = row.find_all('td')
-                cell_values = {}
 
-                for key, td in enumerate(tds):
-                    cell_values[headers[key]] = td.get_text()
+                if len(headers) == len(tds):
+                    cell_values = {}
+                    for key, td in enumerate(tds):
+                        cell_values[headers[key]] = td.get_text()
 
-                current_table_values.append(cell_values)
+                    current_table_values.append(cell_values)
 
             tables_info.append(current_table_values)
 
         return tables_info
+
+    # Clears wikipedia annotations from a string
+    def clear_annotations(self, text):
+        return re.sub('\[[0-9]+\]', '', text)
 
     # Converts a textual date to a unix timestamp
     def date_to_unix_timestamp(self, date, lang = 'el'):
@@ -185,9 +190,8 @@ class Researcher:
             return datetime.datetime(year=int(date), month=1, day=1)
         else:
             return 0
-
+        date = self.clear_annotations(date)
         parts = date.split(separator)
-        print(parts)
 
         if d < len(parts):
             day = parts[d]
@@ -302,14 +306,23 @@ class Researcher:
             print('--------------MINISTRY NAME: ' + ministry_name + '--------------------')
             for table in info:
                 # Make sure this table contains people
-                first_row = table[0]
-                if 'Όνομα' in first_row or 'Ονοματεπώνυμο' in first_row:
+                if table:
+                    first_row = table[0]
+                else:
+                    continue
+
+                print(table)
+                if 'Όνομα' in first_row or 'Ονοματεπώνυμο' in first_row or 'Υπουργός' in first_row:
                     for row in table:
 
-                        if 'Ονοματεπώνυμο' in first_row:
+                        if 'Ονοματεπώνυμο' in row:
                             name = row['Ονοματεπώνυμο']
-                        elif 'Όνομα' in first_row:
+                        elif 'Όνομα' in row:
                             name = row['Όνομα']
+                        elif 'Υπουργός' in row:
+                            name = row['Υπουργός']
+                        else:
+                            continue
 
                         date_from = 0
                         date_to = 0
@@ -342,7 +355,7 @@ class Researcher:
                                                                         'date_from' : [date_from],
                                                                         'role' : [role]})
 
-                        if not position and date_from != 0:
+                        if not position:
                             self.__person_handler.save_position(role, date_from, date_to, person_id,
                                                                 ministry_id, cabinet_id)
 
