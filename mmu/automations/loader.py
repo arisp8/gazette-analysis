@@ -1,9 +1,13 @@
 import time
+import re
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
 import os, errno
 import os.path
+import datetime
+
+from mmu.db.handlers.issue import IssueHandler
 
 # @todo: Catch a few common exceptions that may appear at some points
 # StaleElementReferenceException - Targetting element after DOM has been rebuilt
@@ -27,10 +31,12 @@ class Loader:
         # @todo: Replace hard paths with relative paths and make sure that all needed stuff is downloaded in setup
         self.__driver = webdriver.Chrome(r"C:\Users\user\Documents\Aris\chromedriver.exe", chrome_options=chromeOptions)
 
+        self.__issue_handler = IssueHandler()
+
     def file_exists(self, directory, file_name, file_extension = 'pdf'):
         return os.path.isfile(os.getcwd() + "\\" + directory + "\\" + file_name + '.' + file_extension)
 
-    def downloadAllIssues(self, type, year, source):
+    def downloadAllIssues(self, type, year):
 
         driver = self.__driver
         driver.get(self.__source)
@@ -47,6 +53,8 @@ class Loader:
 
         # Checks the box for this certain type of issues
         driver.find_element_by_name("chbIssue_" + str(type)).click()
+
+        issue_type = driver.find_element_by_id("label-issue-id- " + type)
 
         while additional_issues:
 
@@ -111,11 +119,13 @@ class Loader:
                         download_cell = cells[2]
 
                         name_cell_text = name_cell.text.split(" - ")
-                        fek_title = name_cell_text[0]
-                        fek_date = name_cell_text[1]
+                        issue_title = name_cell_text[0]
+                        issue_date = name_cell_text[1]
+
+                        issue_number = re.sub(pattern='ΦΕΚ ([Α-Ω].?)+', repl="", string=issue_title)
 
                         # Presses the download button if the file is not already saved
-                        if not self.file_exists('pdfs', fek_title):
+                        if not self.file_exists('pdfs', issue_title):
                             download_cell.find_elements_by_tag_name("a")[1].click()
                             time.sleep(7)
 
@@ -125,7 +135,17 @@ class Loader:
                             driver.find_element_by_tag_name("body").send_keys(Keys.CONTROL + 'w')
 
                             # Renames document.pdf to a relevant title
-                            self.renameLatestDownload(fek_title)
+                            issue_file = self.renameLatestDownload(issue_title)
+
+                            # If renaming was successful we log the download to the db
+                            if issue_file:
+
+                                date_parts = issue_date.split(".")
+                                issue_unix_date = datetime.datetime(day=int(date_parts[0]), month=int(date_parts[0]),
+                                                                    year=int(date_parts[2]))
+
+                                self.__issue_handler.create(title=issue_title, type=issue_type, number=issue_number,
+                                                            file=issue_file, date=issue_unix_date)
 
 
                 # We have to re-find the pagination list because the DOM has been rebuilt.
@@ -146,11 +166,14 @@ class Loader:
             print("Destination file already exists")
             return
 
+        success = False
+
         # We'll try 5 times in case the file hasn't been downloaded yet
         tries = 5
         while tries > 0:
             try:
                 os.rename(original, destination)
+                success = True
                 break
             except WindowsError as e    :
                 print("Problem occured with the saving of: " + title)
@@ -158,7 +181,11 @@ class Loader:
             tries -= 1
             time.sleep(0.5)
 
-        # @todo: Log download
+        # Returns the relative file location on success
+        if success:
+            return directory
+        else:
+            return False
 
     def scrapePdfs(self):
 
@@ -171,4 +198,4 @@ class Loader:
         
         year = 2017
         for i in self.__possible_issues:
-            self.downloadAllIssues(i, year, self.__source)
+            self.downloadAllIssues(i, year)
