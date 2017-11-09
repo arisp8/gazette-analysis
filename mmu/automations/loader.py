@@ -11,7 +11,7 @@ from mmu.db.handlers.issue import IssueHandler
 
 # @todo: Catch a few common exceptions that may appear at some points
 # StaleElementReferenceException - Targetting element after DOM has been rebuilt
-# WebDriverException - When chromedriver is closed
+# selenium.common.exceptions.NoSuchWindowException - When chrome's driver is closed
 
 class Loader:
 
@@ -54,7 +54,7 @@ class Loader:
         # Checks the box for this certain type of issues
         driver.find_element_by_name("chbIssue_" + str(type)).click()
 
-        issue_type = driver.find_element_by_id("label-issue-id-" + str(type))
+        issue_type = driver.find_element_by_id("label-issue-id-" + str(type)).text
 
         while additional_issues:
 
@@ -76,13 +76,11 @@ class Loader:
 
             # Gets the amount of results from the messages displayed.
             for element in driver.find_elements_by_xpath('//div[@class="non-printable"]'):
-                print(str(count) + ':' + element.text)
                 count += 1
                 if "Βρέθηκαν" in element.text:
                     # @todo: Try regex instead of search loop and do some benchmarking
                     words = element.text.split(" ")
                     for index, word in enumerate(words):
-                        print(word)
                         if word == "αποτελέσματα":
                             num_results = int(words[index-1])
                     break
@@ -122,10 +120,12 @@ class Loader:
                         issue_title = name_cell_text[0]
                         issue_date = name_cell_text[1]
 
-                        issue_number = re.sub(pattern='ΦΕΚ ([Α-Ω].?)+', repl="", string=issue_title)
+                        issue_number = re.sub(pattern=r'ΦΕΚ ([Α-Ω]?.?)+ ', repl="", string=issue_title)
+
+                        saved_issue = self.__issue_handler.load_by_title(issue_title)
 
                         # Presses the download button if the file is not already saved
-                        if not self.file_exists('pdfs', issue_title):
+                        if not saved_issue:
                             download_cell.find_elements_by_tag_name("a")[1].click()
                             time.sleep(7)
 
@@ -141,7 +141,7 @@ class Loader:
                             if issue_file:
 
                                 date_parts = issue_date.split(".")
-                                issue_unix_date = datetime.datetime(day=int(date_parts[0]), month=int(date_parts[0]),
+                                issue_unix_date = datetime.datetime(day=int(date_parts[0]), month=int(date_parts[1]),
                                                                     year=int(date_parts[2]))
 
                                 self.__issue_handler.create(title=issue_title, type=issue_type, number=issue_number,
@@ -175,7 +175,7 @@ class Loader:
                 os.rename(original, destination)
                 success = True
                 break
-            except WindowsError as e    :
+            except WindowsError as e:
                 print("Problem occured with the saving of: " + title)
 
             tries -= 1
@@ -183,7 +183,7 @@ class Loader:
 
         # Returns the relative file location on success
         if success:
-            return directory
+            return '\\pdfs\\' + title + '.pdf'
         else:
             return False
 
