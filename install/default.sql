@@ -1,10 +1,10 @@
 CREATE TABLE IF NOT EXISTS `signatures` (
 	`id`	INTEGER,
 	`person_id`	INTEGER, -- The person this signature belongs to
-	`fek_id`	INTEGER, -- The fek issue this signature was scraped from
+	`issue_id`	INTEGER, -- The fek issue this signature was scraped from
 	`data`	TEXT, -- Additional data for the signature, possibly extracted from the pdf
 	PRIMARY KEY(`id`),
-	FOREIGN KEY(`fek_id`) REFERENCES `issues`(`id`),
+	FOREIGN KEY(`issue_id`) REFERENCES `issues`(`id`),
 	FOREIGN KEY(`person_id`) REFERENCES `persons`(`id`)
 );
 CREATE TABLE IF NOT EXISTS `positions` (
