@@ -9,6 +9,7 @@ class Helper:
         replace_accents = {'Ά': 'Α', 'Έ': 'Ε', 'Ή': 'Η', 'Ί': 'Ι', 'Ϊ': 'Ι', 'Ό': 'Ο', 'Ύ': 'Υ', 'Ϋ': 'Υ', 'Ώ': 'Ω'}
 
         for accent in replace_accents:
-            name =  name.replace(accent, replace_accents[accent])
+            if accent in name:
+                name =  name.replace(accent, replace_accents[accent])
 
         return name
