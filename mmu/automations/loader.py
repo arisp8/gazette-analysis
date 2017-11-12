@@ -3,7 +3,9 @@ import re
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
-import os, errno
+import os
+import errno
+import glob
 import os.path
 import datetime
 
@@ -159,8 +161,10 @@ class Loader:
     # Renames the downloaded pdfs from document.pdf to a more relevant title
     def rename_latest_download(self, title, original_name = 'document.pdf'):
         directory = os.getcwd()
-        original = directory + '\\pdfs\\' + original_name
+
         destination = directory + '\\pdfs\\' + title + '.pdf'
+        list_of_files = glob.glob(directory + '\\pdfs\\*.pdf')
+        latest_file = max(list_of_files, key=os.path.getctime)
 
         if os.path.isfile(destination):
             print("Destination file already exists")
@@ -172,7 +176,7 @@ class Loader:
         tries = 5
         while tries > 0:
             try:
-                os.rename(original, destination)
+                os.rename(latest_file, destination)
                 success = True
                 break
             except WindowsError as e:

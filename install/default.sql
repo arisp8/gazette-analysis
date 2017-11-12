@@ -47,7 +47,8 @@ CREATE TABLE IF NOT EXISTS `issues` (
 	`title`	TEXT, -- The title of the fek issue
 	`type`	TEXT, -- The type of the fek issue, e.g A, B, 	Α.Σ.Ε.Π. etc.
 	`number`	INTEGER, -- The number of the issue
-	`file`	TEXT, -- The issues pdf file location
+	`file`	TEXT, -- The issues pdf file location,
+	`analyzed` INTEGER(1),
 	`date`	INTEGER, -- UNIX timestamp when this fek issue was published
 	PRIMARY KEY(`id`)
 );

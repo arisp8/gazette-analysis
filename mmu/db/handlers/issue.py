@@ -8,7 +8,8 @@ class IssueHandler(TransactionHandler):
 
     # Creates new record in the database for the issue
     def create(self, title, type, number, file, date):
-        values = {'title' : title, 'type' : type, 'number' : number, 'file' : file, 'date' : date}
+        # Analyzed is false by default when creating a new issue
+        values = {'title' : title, 'type' : type, 'number' : number, 'file' : file, 'date' : date, 'analyzed': 0}
         TransactionHandler.insert(self, 'issues', values)
 
     # Loads information about an issue by its title
