@@ -19,6 +19,7 @@ class CustomPDFParser:
         return text
 
     # Uses libpoppler's pdfimages tool to extract all images from the pdf and then uses PIL to convert from ppm to jpg
+    # @return A list of image paths extracted from this pdf
     def get_pdf_images(self, file_name, id):
         file_path = self.__project_path + file_name
         directory = self.__project_path + '\\images\\' + str(id)
@@ -28,15 +29,19 @@ class CustomPDFParser:
             call(['pdfimages', file_path, directory +  "\\" + str(id)])
 
         files = os.listdir(directory)
-        # print(files)
+
         for file in files:
             image_path = os.path.join(directory, file)
-            image = Image.open(image_path)
-            image.save(image_path.replace(".ppm", ".jpg"))
+            # Convert .ppm images to jpg
+            if '.ppm' in image_path:
+                image = Image.open(image_path)
+                image_path = image_path.replace(".ppm", ".jpg")
+                image.save(image_path)
+            images.append(image_path)
 
 
 
-        return "YO!"
+        return images
 
     def convert_pdf_to_txt(self, path):
         rsrcmgr = PDFResourceManager()
