@@ -14,6 +14,8 @@ class Analyzer:
             issue_id = issue['id']
             issue_file = issue['file']
 
-            raw_pdf_data = self.__pdf_analyzer.get_raw_data(issue_file)
+            pdf_text = self.__pdf_analyzer.get_pdf_text(issue_file)
+            pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
+            print(pdf_text)
 
 
