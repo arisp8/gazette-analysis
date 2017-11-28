@@ -131,17 +131,19 @@ class Loader:
                             download_cell.find_elements_by_tag_name("a")[1].click()
                             time.sleep(7)
 
-                            # @TODO: Below solution not working for closing the tabs, need to find another one
-                            # Closes the new download tab that has been opened
-                            driver.find_element_by_tag_name("body").send_keys(Keys.CONTROL + '2')
-                            driver.find_element_by_tag_name("body").send_keys(Keys.CONTROL + 'w')
-
                             # Renames document.pdf to a relevant title
                             issue_file = self.rename_latest_download(issue_title)
 
+                            # Closes the new download tab that has been opened
+                            if len(driver.window_handles) > 1:
+                                base_tab = driver.window_handles[0]
+                                new_tab = driver.window_handles[1]
+                                driver.switch_to.window(new_tab)
+                                driver.close()
+                                driver.switch_to.window(base_tab)
+
                             # If renaming was successful we log the download to the db
                             if issue_file:
-
                                 date_parts = issue_date.split(".")
                                 issue_unix_date = datetime.datetime(day=int(date_parts[0]), month=int(date_parts[1]),
                                                                     year=int(date_parts[2]))
