@@ -15,7 +15,11 @@ class CustomPDFParser:
         self.__project_path = os.getcwd()
 
     def get_pdf_text(self, file_name):
-        text = self.convert_pdf_to_txt(self.__project_path + file_name)
+        try:
+            text = self.convert_pdf_to_txt(self.__project_path + file_name)
+        except FileNotFoundError:
+            print("The file with the name {} was not found.".format(file_name))
+            text = ""
         return text
 
     # Uses libpoppler's pdfimages tool to extract all images from the pdf and then uses PIL to convert from ppm to jpg
