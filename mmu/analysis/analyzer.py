@@ -89,10 +89,12 @@ class Analyzer:
             else:
                 substring = text[index:]
 
-            words = substring.split("\n")
+            words = re.split("\n|\s{2,2}", substring)
+            print(words)
 
             # Iterates through words after the starting key
             role = ""
+            temp_name = ""
             for word in words[1:]:
 
                 # If a valid ending point has not been found, then the first non-word will surely indicate the end of
@@ -100,14 +102,20 @@ class Analyzer:
                 if not end and self.is_break_point(word):
                     break
 
+
                 if len(word) > 3 and word.upper() == word:
-                    persons.append({"role" : self.format_role(role), "name" : word})
+                    if not role:
+                        temp_name = word.strip()
+                    persons.append({"role" : self.format_role(role), "name" : word.strip()})
                     # Reset role for the next one
                     role = ""
                 else:
                     role += word
 
-            print(persons)
+            if temp_name and role:
+                persons.append({"role": self.format_role(role), "name": temp_name})
+
+            return persons
 
 
 
@@ -123,9 +131,16 @@ class Analyzer:
             pdf_text = self.__pdf_analyzer.get_pdf_text(issue_file)
             pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
 
+            print(pdf_text)
+
             if pdf_text:
                 print("Extracting signatures from issue {}".format(issue_number))
                 text_signatures = self.extract_signatures_from_text(pdf_text)
+
+                if text_signatures:
+                    for signature in text_signatures:
+                        print(signature)
+
 
 
 
