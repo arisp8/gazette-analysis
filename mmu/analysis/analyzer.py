@@ -11,6 +11,8 @@ class Analyzer:
         # Compile regular expressions that will be used a lot
         self.__date_pattern = re.compile(r"[α-ωΑ-Ωά-ώϊ-ϋΐ-ΰ]+,\s+?[0-9]{1,2}\s+?[α-ζΑ-Ζά-ώϊ-ϋΐ-ΰ]+\s+?[0-9]{4,4}")
         self.__illegal_chars = re.compile(r"\d+")
+        self.__camel_case_patteren = re.compile("([α-ω])([Α-Ω])")
+        self.__final_s_pattern = re.compile("(ς)([Α-Ωα-ωά-ώ])")
 
     # Checks whether or not a string indicates that parsing should stop.
     def is_break_point(self, word):
@@ -37,6 +39,24 @@ class Analyzer:
                 start = index + 1
 
         return matches
+
+    # Formats roles extracted from pdfs. Specifically, splits separate words that are stuck together
+    def format_role(self, text):
+        parts = text.split(" ")
+
+        final_word = ""
+        for part in parts:
+            split = self.__camel_case_patteren.sub(r'\1 \2', part).split()
+
+            # If no TitleCase or camelCase was found then we address the possibility of a final s inside a word
+            if len(split) == 1:
+                split = self.__final_s_pattern.sub(r'\1 \2', part).split()
+
+            for word in split:
+                final_word += word + " "
+
+        # Returns the word without trailing spaces
+        return final_word.strip()
 
     # Analyzes the text from the pdf files to extract all signatures
     def extract_signatures_from_text(self, text):
@@ -81,7 +101,7 @@ class Analyzer:
                     break
 
                 if len(word) > 3 and word.upper() == word:
-                    persons.append({"role" : role, "name" : word})
+                    persons.append({"role" : self.format_role(role), "name" : word})
                     # Reset role for the next one
                     role = ""
                 else:
@@ -92,20 +112,6 @@ class Analyzer:
 
 
     def start_analysis(self):
-        # word1 = "ΝΙΚΟΛΑΟΣ ΚΟΤΖΙΑΣ "
-        # word2 = " "
-        # word3 = ""
-        # word4 = "52"
-        # word5 = "\x0c32"
-        # word6 = "Καποδιστρίου 54"
-        # print(self.is_break_point(word1))
-        # print(self.is_break_point(word2))
-        # print(self.is_break_point(word3))
-        # print(self.is_break_point(word4))
-        # print(self.is_break_point(word5))
-        # print(self.is_break_point(word6))
-        # exit()
-
         # Loads all issues not yet analyzed
         issues = self.__issue_handler.load_all({'analyzed' : [0]})
 
