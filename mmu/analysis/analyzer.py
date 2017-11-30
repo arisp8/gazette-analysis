@@ -1,7 +1,10 @@
 from mmu.db.handlers.issue import IssueHandler
 from mmu.db.handlers.signatures import SignatureHandler
+from mmu.db.handlers.person import PersonHandler
+from mmu.automations.researcher import Researcher
 from mmu.analysis.pdf_parser import CustomPDFParser
 import re
+import json
 
 class Analyzer:
 
@@ -9,6 +12,8 @@ class Analyzer:
         self.__issue_handler = IssueHandler()
         self.__pdf_analyzer = CustomPDFParser()
         self.__signature_handler = SignatureHandler()
+        self.__person_handler = PersonHandler()
+        self.__researcher = Researcher()
 
         # Compile regular expressions that will be used a lot
         self.__date_pattern = re.compile(r"[α-ωΑ-Ωά-ώϊ-ϋΐ-ΰ]+,\s+?[0-9]{1,2}\s+?[α-ζΑ-Ζά-ώϊ-ϋΐ-ΰ]+\s+?[0-9]{4,4}")
@@ -69,9 +74,6 @@ class Analyzer:
         for key in start_keys:
             starting_indexes += self.find_all(key, text)
 
-        if len(starting_indexes) > 1:
-            print(starting_indexes)
-
         if not starting_indexes:
             starting_indexes = [m.start() for m in self.__date_pattern.finditer(text)]
 
@@ -92,7 +94,6 @@ class Analyzer:
                 substring = text[index:]
 
             words = re.split("\n|\s{2,2}", substring)
-            print(words)
 
             # Iterates through words after the starting key
             role = ""
@@ -124,6 +125,17 @@ class Analyzer:
         conditions = {'issue_id' : [issue_id]}
         return self.__signature_handler.load_all_by_person_name(person_name, conditions=conditions)
 
+    # Returns information about a person that's saved in the db. If no information is saved, then
+    # all required information is found through the researcher.
+    def load_person_by_name(self, name):
+        person = self.__person_handler.load_by_name(name)
+
+        if not person:
+            self.__researcher.research_person(name)
+            person = self.__person_handler.load_by_name(name)
+
+        return person
+
     def start_analysis(self):
         # Loads all issues not yet analyzed
         issues = self.__issue_handler.load_all({'analyzed' : [0]})
@@ -136,8 +148,6 @@ class Analyzer:
             pdf_text = self.__pdf_analyzer.get_pdf_text(issue_file)
             pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
 
-            print(pdf_text)
-
             if pdf_text:
                 print("Extracting signatures from issue {}".format(issue_number))
                 text_signatures = self.extract_signatures_from_text(pdf_text)
@@ -146,8 +156,10 @@ class Analyzer:
                     for signature in text_signatures:
                         name = signature['name']
                         role = signature['role']
-                        loaded = self.load_signature_from_issue(issue_id, name)
+                        db_signature = self.load_signature_from_issue(issue_id, name)
 
-
-
-
+                        if not db_signature:
+                            person = self.load_person_by_name(name)
+                            data = json.dumps(signature)
+                            person_id = person['id']
+                            self.__signature_handler.create(person_id, issue_id, data)
