@@ -100,20 +100,43 @@ class Analyzer:
             # Iterates through words after the starting key
             role = ""
             temp_name = ""
-            for word in words[1:]:
+            skip_steps = 0
+
+            for key, word in enumerate(words[1:]):
 
                 # If a valid ending point has not been found, then the first non-word will surely indicate the end of
                 # the signatures.
                 if not end and self.is_break_point(word):
                     break
 
+                # Skips an element if required
+                if skip_steps > 0:
+                    skip_steps -= 1
+                    continue
 
                 if len(word) > 3 and word.upper() == word:
+
                     if not role:
                         temp_name = word.strip()
-                    persons.append({"role" : self.format_role(role), "name" : word.strip()})
+                    else:
+                        persons.append({"role" : self.format_role(role), "name" : word.strip()})
+
                     # Reset role for the next one
                     role = ""
+
+                elif temp_name and len(word) > 3:
+                    temp_role = ""
+                    current_key = key + 1
+
+                    while current_key < len(words) - 1:
+                        if words[current_key] == "":
+                            break
+                        else:
+                            temp_role += words[current_key] + " "
+                            current_key += 1
+                    skip_steps = current_key - (key + 2)
+                    persons.append({'role' : temp_role.strip(), 'name': temp_name})
+                    temp_name = ""
                 else:
                     role += word
 
@@ -152,6 +175,7 @@ class Analyzer:
             issue_file = issue['file']
             issue_number = issue['number']
             issue_title = issue['title']
+            issue_date = issue['date']
 
             pdf_text = self.__pdf_analyzer.get_pdf_text(issue_file)
             pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
@@ -177,5 +201,6 @@ class Analyzer:
                         raw_signature = self.load_raw_signature(issue_title, person_name)
 
                         if not raw_signature:
-                            self.__raw_signature_handler.create(person_name, issue_title, role)
+                            self.__raw_signature_handler.create(person_name, role, issue_title, issue_date)
 
+                        self.__issue_handler.set_analyzed(issue_id)
