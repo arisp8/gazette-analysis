@@ -1,5 +1,6 @@
 from mmu.db.handlers.issue import IssueHandler
 from mmu.db.handlers.signatures import SignatureHandler
+from mmu.db.handlers.signatures import RawSignatureHandler
 from mmu.db.handlers.person import PersonHandler
 from mmu.automations.researcher import Researcher
 from mmu.analysis.pdf_parser import CustomPDFParser
@@ -14,6 +15,7 @@ class Analyzer:
         self.__signature_handler = SignatureHandler()
         self.__person_handler = PersonHandler()
         self.__researcher = Researcher()
+        self.__raw_signature_handler = RawSignatureHandler()
 
         # Compile regular expressions that will be used a lot
         self.__date_pattern = re.compile(r"[α-ωΑ-Ωά-ώϊ-ϋΐ-ΰ]+,\s+?[0-9]{1,2}\s+?[α-ζΑ-Ζά-ώϊ-ϋΐ-ΰ]+\s+?[0-9]{4,4}")
@@ -136,6 +138,11 @@ class Analyzer:
 
         return person
 
+    # Loads a raw signature by its issue title and by the person's name
+    def load_raw_signature(self, issue_title, person_name):
+        conditions = {'issue_title': [issue_title], 'person_name': [person_name]}
+        return self.__raw_signature_handler.load_one(conditions=conditions)
+
     def start_analysis(self):
         # Loads all issues not yet analyzed
         issues = self.__issue_handler.load_all({'analyzed' : [0]})
@@ -144,6 +151,7 @@ class Analyzer:
             issue_id = issue['id']
             issue_file = issue['file']
             issue_number = issue['number']
+            issue_title = issue['title']
 
             pdf_text = self.__pdf_analyzer.get_pdf_text(issue_file)
             pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
@@ -156,10 +164,18 @@ class Analyzer:
                     for signature in text_signatures:
                         name = signature['name']
                         role = signature['role']
+                        person = self.load_person_by_name(name)
                         db_signature = self.load_signature_from_issue(issue_id, name)
 
                         if not db_signature:
-                            person = self.load_person_by_name(name)
+
                             data = json.dumps(signature)
                             person_id = person['id']
                             self.__signature_handler.create(person_id, issue_id, data)
+
+                        person_name = person['name']
+                        raw_signature = self.load_raw_signature(issue_title, person_name)
+
+                        if not raw_signature:
+                            self.__raw_signature_handler.create(person_name, issue_title, role)
+
