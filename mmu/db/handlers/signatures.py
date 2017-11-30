@@ -61,6 +61,6 @@ class RawSignatureHandler(TransactionHandler):
         return TransactionHandler.select_all(self, table='raw_signatures', conditions=conditions)
 
     # Saves a signature in the sqlite database
-    def create(self, person_name, issue_title, role):
-        params = {'person_name': person_name, 'issue_title': issue_title, 'role': role}
+    def create(self, person_name, role, issue_title, issue_date):
+        params = {'person_name': person_name, 'role': role, 'issue_title': issue_title, 'issue_date' : issue_date}
         TransactionHandler.insert(self, table='raw_signatures', params=params)
