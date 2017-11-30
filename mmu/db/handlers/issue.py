@@ -23,3 +23,9 @@ class IssueHandler(TransactionHandler):
             return TransactionHandler.select_all(self, table='issues', conditions=conditions)
         else:
             return TransactionHandler.select_all(self, table='issues')
+
+    # Given an issue's id, indicates it has been analyzed
+    def set_analyzed(self, issue_id):
+        params = {'analyzed': 1}
+        conditions = {'id' : [issue_id]}
+        TransactionHandler.update(self, table='issues', params=params, conditions=conditions)
