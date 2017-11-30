@@ -20,7 +20,6 @@ class SignatureHandler(TransactionHandler):
             conditions = {}
 
         conditions['persons.name'] = [person_name]
-        print(conditions)
         return TransactionHandler.select_all(self, table='signatures', conditions=conditions, joins=joins)
 
     # Selects (up to) one signature that matches the conditions given
@@ -30,3 +29,8 @@ class SignatureHandler(TransactionHandler):
     # Selects all signatures that match the conditions given
     def load_all(self, conditions = None):
         return TransactionHandler.select_all(self, table='signatures', conditions=conditions)
+
+    # Saves a signature in the sqlite database
+    def create(self, person_id, issue_id, data):
+        params = {'person_id': person_id, 'issue_id': issue_id, 'data': data}
+        TransactionHandler.insert(self, table='signatures', params=params)

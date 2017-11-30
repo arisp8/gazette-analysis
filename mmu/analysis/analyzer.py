@@ -1,4 +1,5 @@
 from mmu.db.handlers.issue import IssueHandler
+from mmu.db.handlers.signatures import SignatureHandler
 from mmu.analysis.pdf_parser import CustomPDFParser
 import re
 
@@ -7,6 +8,7 @@ class Analyzer:
     def __init__(self):
         self.__issue_handler = IssueHandler()
         self.__pdf_analyzer = CustomPDFParser()
+        self.__signature_handler = SignatureHandler()
 
         # Compile regular expressions that will be used a lot
         self.__date_pattern = re.compile(r"[α-ωΑ-Ωά-ώϊ-ϋΐ-ΰ]+,\s+?[0-9]{1,2}\s+?[α-ζΑ-Ζά-ώϊ-ϋΐ-ΰ]+\s+?[0-9]{4,4}")
@@ -118,6 +120,9 @@ class Analyzer:
             return persons
 
 
+    def load_signature_from_issue(self, issue_id, person_name):
+        conditions = {'issue_id' : [issue_id]}
+        return self.__signature_handler.load_all_by_person_name(person_name, conditions=conditions)
 
     def start_analysis(self):
         # Loads all issues not yet analyzed
@@ -139,7 +144,9 @@ class Analyzer:
 
                 if text_signatures:
                     for signature in text_signatures:
-                        print(signature)
+                        name = signature['name']
+                        role = signature['role']
+                        loaded = self.load_signature_from_issue(issue_id, name)
 
 
 
