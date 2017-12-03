@@ -43,26 +43,7 @@ class Researcher:
         f = {'action' : 'opensearch', 'search' : keyword, 'limit' : limit, 'namespace' : 0,
              'format' : 'json', 'profile' : 'fuzzy'}
         link = link.format(lang=lang) + urllib.parse.urlencode(f)
-        return self.get_url_contents(link, 'json')
-
-    # Performs an http request and returns the response
-    def get_url_contents(self, link, content_type=''):
-        try:
-            with urllib.request.urlopen(link) as url:
-                response = url.read().decode("utf-8")
-
-                if content_type == 'json':
-                    s = json.JSONDecoder(object_pairs_hook=collections.OrderedDict).decode(response)
-                    return s
-                else:
-                    return response
-
-        except urllib.error.HTTPError as e:
-            print(e)
-            return {}
-        except urllib.error.URLError as e:
-            print(e)
-            return {}
+        return Helper.get_url_contents(link, 'json')
 
     # Clears text from useless remaining markup elements
     def clear_text(self, text):
@@ -102,7 +83,7 @@ class Researcher:
 
     # Returns formatted information fetched from the table on the top right of wikipedia articles
     def wiki_synopsis_info(self, link):
-        html = self.get_url_contents(link)
+        html = Helper.get_url_contents(link)
         soup = BeautifulSoup(html, 'html.parser')
         table = soup.find("table", {"class": "infobox"})
 
@@ -130,7 +111,7 @@ class Researcher:
 
     # Parses a wikipedia article's tables and returns all relevant information
     def wiki_article_info(self, link):
-        html = self.get_url_contents(link)
+        html = Helper.get_url_contents(link)
         soup = BeautifulSoup(html, 'html.parser')
         tables = soup.find("div", {"id": "mw-content-text"}).find_all('table')
         tables_info = []
@@ -170,62 +151,16 @@ class Researcher:
     def clear_annotations(self, text):
         return re.sub('\[[0-9]+\]', '', text)
 
-    # Converts a textual date to a unix timestamp
-    def date_to_unix_timestamp(self, date, lang = 'el'):
-        if lang == 'el':
-            d = 0
-            m = 1
-            y = 2
-            months = {'Ιανουαρίου' : 1, 'Φεβρουαρίου' : 2, 'Μαρτίου' : 3, 'Απριλίου' : 4, 'Μαΐου' : 5, 'Ιουνίου' : 6,
-                      'Ιουλίου' : 7, 'Αυγούστου' : 8, 'Σεπτεμβρίου' : 9, 'Οκτωβρίου' : 10, 'Νοεμβρίου' : 11,
-                      'Δεκεμβρίου' : 12, 'Μαίου': 5}
-            text_month = False
-            separator = " "
-            pattern = "Α-Ωα-ωά-ώ"
-
-        if re.match('[0-9]{1,2} [' + pattern + ']{1,} [0-9]{4,4}', date):
-            separator = " "
-            text_month = True
-        elif re.match('[0-9]{1,2}-[0-9]{1,2}-[0-9]{,4}', date):
-            separator = "-"
-        elif re.match('[0-9]{1,2}/[0-9]{1,2}/[0-9]{,4}', date):
-            separator = "/"
-        elif re.match('[0-9]{4,4}', date):
-            return datetime.datetime(year=int(date), month=1, day=1)
-        else:
-            return 0
-        date = self.clear_annotations(date)
-        parts = date.split(separator)
-
-        if d < len(parts):
-            day = parts[d]
-        else:
-            day = 1
-
-        if m < len(parts) and text_month:
-            month = months[parts[m]]
-        elif m in parts:
-            month = parts[m]
-        else:
-            month = 1
-
-        if y < len(parts):
-            year = parts[y]
-        else:
-            return 0
-
-        return datetime.datetime(year=int(year), month=int(month), day=int(day))
-
     # Creates new records for the ministries that we don't have saved
     def save_ministry(self, name, description, params):
         established = 0
         disbanded = 0
 
         if 'σύσταση' in params:
-            established = self.date_to_unix_timestamp(params['σύσταση'])
+            established = Helper.date_to_unix_timestamp(params['σύσταση'])
 
         if 'κατάργηση' in params:
-            disbanded = self.date_to_unix_timestamp(params['κατάργηση'])
+            disbanded = Helper.date_to_unix_timestamp(params['κατάργηση'])
 
         ministry = self.__ministry_handler.load_by_name(name)
         print(ministry)
@@ -238,10 +173,10 @@ class Researcher:
         date_to = 0
 
         if 'ημερομηνία σχηματισμού' in params:
-            date_from = self.date_to_unix_timestamp(params['ημερομηνία σχηματισμού'])
+            date_from = Helper.date_to_unix_timestamp(params['ημερομηνία σχηματισμού'])
 
         if 'ημερομηνία διάλυσης' in params:
-            date_to = self.date_to_unix_timestamp(params['ημερομηνία διάλυσης'])
+            date_to = Helper.date_to_unix_timestamp(params['ημερομηνία διάλυσης'])
 
         cabinet  = self.__cabinet_handler.load_by_title(title)
 
@@ -334,10 +269,10 @@ class Researcher:
                         cabinet_id = None
 
                         if 'Έναρξη Θητείας' in row:
-                            date_from = self.date_to_unix_timestamp(row['Έναρξη Θητείας'])
+                            date_from = Helper.date_to_unix_timestamp(row['Έναρξη Θητείας'])
 
                         if 'Λήξη Θητείας' in row:
-                            date_to = self.date_to_unix_timestamp(row['Λήξη Θητείας'])
+                            date_to = Helper.date_to_unix_timestamp(row['Λήξη Θητείας'])
 
                         if 'Κυβέρνηση' in row:
                             cabinet_title = row['Κυβέρνηση']
