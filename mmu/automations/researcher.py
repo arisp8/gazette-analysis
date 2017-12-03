@@ -147,10 +147,6 @@ class Researcher:
 
         return tables_info
 
-    # Clears wikipedia annotations from a string
-    def clear_annotations(self, text):
-        return re.sub('\[[0-9]+\]', '', text)
-
     # Creates new records for the ministries that we don't have saved
     def save_ministry(self, name, description, params):
         established = 0
