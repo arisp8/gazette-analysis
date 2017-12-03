@@ -16,7 +16,7 @@ class CustomPDFParser:
 
     def get_pdf_text(self, file_name):
         try:
-            text = self.convert_pdf_to_txt(self.__project_path + file_name)
+            text = self.convert_pdf_to_txt(file_name)
         except FileNotFoundError:
             print("The file with the name {} was not found.".format(file_name))
             text = ""
