@@ -1,12 +1,21 @@
 from mmu.db.handlers.issue import IssueHandler
+from mmu.db.handlers.signatures import SignatureHandler
+from mmu.db.handlers.signatures import RawSignatureHandler
+from mmu.db.handlers.person import PersonHandler
+from mmu.automations.researcher import Researcher
 from mmu.analysis.pdf_parser import CustomPDFParser
 import re
+import json
 
 class Analyzer:
 
     def __init__(self):
         self.__issue_handler = IssueHandler()
         self.__pdf_analyzer = CustomPDFParser()
+        self.__signature_handler = SignatureHandler()
+        self.__person_handler = PersonHandler()
+        self.__researcher = Researcher()
+        self.__raw_signature_handler = RawSignatureHandler()
 
         # Compile regular expressions that will be used a lot
         self.__date_pattern = re.compile(r"[α-ωΑ-Ωά-ώϊ-ϋΐ-ΰ]+,\s+?[0-9]{1,2}\s+?[α-ζΑ-Ζά-ώϊ-ϋΐ-ΰ]+\s+?[0-9]{4,4}")
@@ -67,9 +76,6 @@ class Analyzer:
         for key in start_keys:
             starting_indexes += self.find_all(key, text)
 
-        if len(starting_indexes) > 1:
-            print(starting_indexes)
-
         if not starting_indexes:
             starting_indexes = [m.start() for m in self.__date_pattern.finditer(text)]
 
@@ -90,25 +96,47 @@ class Analyzer:
                 substring = text[index:]
 
             words = re.split("\n|\s{2,2}", substring)
-            print(words)
 
             # Iterates through words after the starting key
             role = ""
             temp_name = ""
-            for word in words[1:]:
+            skip_steps = 0
+
+            for key, word in enumerate(words[1:]):
 
                 # If a valid ending point has not been found, then the first non-word will surely indicate the end of
                 # the signatures.
                 if not end and self.is_break_point(word):
                     break
 
+                # Skips an element if required
+                if skip_steps > 0:
+                    skip_steps -= 1
+                    continue
 
                 if len(word) > 3 and word.upper() == word:
+
                     if not role:
                         temp_name = word.strip()
-                    persons.append({"role" : self.format_role(role), "name" : word.strip()})
+                    else:
+                        persons.append({"role" : self.format_role(role), "name" : word.strip()})
+
                     # Reset role for the next one
                     role = ""
+
+                elif temp_name and len(word) > 3:
+                    temp_role = ""
+                    current_key = key + 1
+
+                    while current_key < len(words) - 1:
+                        if words[current_key] == "":
+                            break
+                        else:
+                            temp_role += words[current_key] + " "
+                            current_key += 1
+                    skip_steps = current_key - (key + 2)
+                    persons.append({'role' : temp_role.strip(), 'name': temp_name})
+                    temp_name = ""
                 else:
                     role += word
 
@@ -118,6 +146,25 @@ class Analyzer:
             return persons
 
 
+    def load_signature_from_issue(self, issue_id, person_name):
+        conditions = {'issue_id' : [issue_id]}
+        return self.__signature_handler.load_all_by_person_name(person_name, conditions=conditions)
+
+    # Returns information about a person that's saved in the db. If no information is saved, then
+    # all required information is found through the researcher.
+    def load_person_by_name(self, name):
+        person = self.__person_handler.load_by_name(name)
+
+        if not person:
+            self.__researcher.research_person(name)
+            person = self.__person_handler.load_by_name(name)
+
+        return person
+
+    # Loads a raw signature by its issue title and by the person's name
+    def load_raw_signature(self, issue_title, person_name):
+        conditions = {'issue_title': [issue_title], 'person_name': [person_name]}
+        return self.__raw_signature_handler.load_one(conditions=conditions)
 
     def start_analysis(self):
         # Loads all issues not yet analyzed
@@ -127,11 +174,11 @@ class Analyzer:
             issue_id = issue['id']
             issue_file = issue['file']
             issue_number = issue['number']
+            issue_title = issue['title']
+            issue_date = issue['date']
 
             pdf_text = self.__pdf_analyzer.get_pdf_text(issue_file)
             pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
-
-            print(pdf_text)
 
             if pdf_text:
                 print("Extracting signatures from issue {}".format(issue_number))
@@ -139,8 +186,21 @@ class Analyzer:
 
                 if text_signatures:
                     for signature in text_signatures:
-                        print(signature)
+                        name = signature['name']
+                        role = signature['role']
+                        person = self.load_person_by_name(name)
+                        db_signature = self.load_signature_from_issue(issue_id, name)
 
+                        if not db_signature:
 
+                            data = json.dumps(signature)
+                            person_id = person['id']
+                            self.__signature_handler.create(person_id, issue_id, data)
 
+                        person_name = person['name']
+                        raw_signature = self.load_raw_signature(issue_title, person_name)
 
+                        if not raw_signature:
+                            self.__raw_signature_handler.create(person_name, role, issue_title, issue_date)
+
+                        self.__issue_handler.set_analyzed(issue_id)

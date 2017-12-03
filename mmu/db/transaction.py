@@ -82,8 +82,14 @@ class TransactionHandler:
                 if count == num_conditions - 1:
                     separator = ""
 
-                formatted_conditions += "{table}.{name} {operator} {value} {separator}".format(table= table,
-                    name=condition_name, operator=operator, value=condition_value, separator=separator)
+                # Only add rename attribute condition to table.attribute when no other table is being specified
+                if '.' not in condition_name:
+                    formatted_conditions += "{table}.{name} {operator} {value} {separator}".format(table= table,
+                        name=condition_name, operator=operator, value=condition_value, separator=separator)
+                else:
+                    formatted_conditions += "{name} {operator} {value} {separator}".format(table=table,
+                       name=condition_name, operator=operator, value=condition_value, separator=separator)
+
                 count += 1
 
         return formatted_conditions

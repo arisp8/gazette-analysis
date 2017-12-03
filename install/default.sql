@@ -10,8 +10,10 @@ CREATE TABLE IF NOT EXISTS `signatures` (
 CREATE TABLE IF NOT EXISTS `raw_signatures` (
 	`id`	INTEGER,
 	`person_name`	TEXT, -- The name of the person this signature belongs to
-	`issue_name`	TEXT, -- The name of the issues this signature was extracted from
-	`role`  TEXT -- The role of the minister signing
+	`role`  TEXT, -- The role of the minister signing
+	`issue_title`	TEXT, -- The name of the issues this signature was extracted from
+	`issue_date` INTEGER NOT NULL, -- UNIX timestamp when the issue this signature was found on was published
+	PRIMARY KEY(`id`)
 );
 CREATE TABLE IF NOT EXISTS `positions` (
 	`id`	INTEGER,
