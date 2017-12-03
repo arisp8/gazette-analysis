@@ -77,8 +77,14 @@ class Helper:
             r.close()
             return True
 
+    # Clears wikipedia annotations from a string
+    @staticmethod
+    def clear_annotations(text):
+        return re.sub('\[[0-9]+\]', '', text)
+
     # Converts a textual date to a unix timestamp
-    def date_to_unix_timestamp(self, date, lang='el'):
+    @staticmethod
+    def date_to_unix_timestamp(date, lang='el'):
         if lang == 'el':
             d = 0
             m = 1
@@ -101,7 +107,7 @@ class Helper:
             return datetime.datetime(year=int(date), month=1, day=1)
         else:
             return 0
-        date = self.clear_annotations(date)
+        date = Helper.clear_annotations(date)
         parts = date.split(separator)
 
         if d < len(parts):
@@ -111,7 +117,7 @@ class Helper:
 
         if m < len(parts) and text_month:
             month = months[parts[m]]
-        elif m in parts:
+        elif m < len(parts):
             month = parts[m]
         else:
             month = 1
