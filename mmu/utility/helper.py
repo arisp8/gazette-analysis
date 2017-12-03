@@ -16,7 +16,7 @@ class Helper:
     @staticmethod
     def normalize_greek_name(name):
         # α, β, γ, δ, ε, ζ, η, θ, ι, κ, λ, μ, ν, ξ, ο, π, ρ, σ, τ, υ, φ, χ, ψ, ω
-        name = name.upper()
+        name = name.replace("ΐ", "ϊ").upper()
         replace_accents = {'Ά': 'Α', 'Έ': 'Ε', 'Ή': 'Η', 'Ί': 'Ι', 'Ϊ': 'Ι', 'Ό': 'Ο', 'Ύ': 'Υ', 'Ϋ': 'Υ', 'Ώ': 'Ω'}
 
         for accent in replace_accents:
