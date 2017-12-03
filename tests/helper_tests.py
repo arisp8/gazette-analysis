@@ -17,6 +17,9 @@ class HelperTest(unittest.TestCase):
         self.assertEqual(Helper.date_to_unix_timestamp("21-08-1998"), datetime.datetime(1998, 8, 21))
         self.assertEqual(Helper.date_to_unix_timestamp("21/08/1998"), datetime.datetime(1998, 8, 21))
 
+    def test_clear_annotations(self):
+        self.assertEqual(Helper.clear_annotations("Κινδυνεύει με αφανισμό (IUCN 3.1) [1]"), "Κινδυνεύει με αφανισμό (IUCN 3.1) ")
+
 
 if __name__ == '__main__':
     unittest.main()
