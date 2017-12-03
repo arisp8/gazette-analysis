@@ -3,6 +3,7 @@ import re
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
+from bs4 import BeautifulSoup
 import os
 import errno
 import glob
@@ -10,9 +11,9 @@ import os.path
 import datetime
 
 from mmu.db.handlers.issue import IssueHandler
+from mmu.utility.helper import Helper
 
 # @todo: Catch a few common exceptions that may appear at some points
-# StaleElementReferenceException - Targetting element after DOM has been rebuilt
 # selenium.common.exceptions.NoSuchWindowException - When chrome's driver is closed
 
 class Loader:
@@ -24,7 +25,8 @@ class Loader:
 
     def __init__(self, source):
         self.__source = source
-
+        self.download_links = []
+        self.download_folder = os.path.join(os.getcwd(), 'pdfs')
 
         chromeOptions = webdriver.ChromeOptions()
         prefs = {"download.default_directory": os.getcwd() + "\pdfs"}
@@ -66,7 +68,6 @@ class Loader:
             driver.find_element_by_name("fekNumberTo").clear()
             driver.find_element_by_name("fekNumberTo").send_keys(str(num_start + 200))
 
-
             # Submits the search form
             driver.find_element_by_name("search").click()
 
@@ -106,51 +107,9 @@ class Loader:
             num_pages = len(pages)
 
             for current_page in range(0, num_pages):
-                # @TODO: Create SQLite database to log messages, save file names and dates etc.
 
-                result_table = driver.find_element_by_id("result_table")
-                rows = result_table.find_elements_by_tag_name("tr")
-
-                # Goes through all table rows to get names, dates and download links
-                for row in rows:
-                    cells = row.find_elements_by_tag_name("td")
-                    if len(cells) > 2:
-                        name_cell = cells[1].find_element_by_tag_name("b")
-                        download_cell = cells[2]
-
-                        name_cell_text = name_cell.text.split(" - ")
-                        issue_title = name_cell_text[0]
-                        issue_date = name_cell_text[1]
-
-                        issue_number = re.sub(pattern=r'ΦΕΚ ([Α-Ω]?.?)+ ', repl="", string=issue_title)
-
-                        saved_issue = self.__issue_handler.load_by_title(issue_title)
-
-                        # Presses the download button if the file is not already saved
-                        if not saved_issue:
-                            download_cell.find_elements_by_tag_name("a")[1].click()
-                            time.sleep(7)
-
-                            # Renames document.pdf to a relevant title
-                            issue_file = self.rename_latest_download(issue_title)
-
-                            # Closes the new download tab that has been opened
-                            if len(driver.window_handles) > 1:
-                                base_tab = driver.window_handles[0]
-                                new_tab = driver.window_handles[1]
-                                driver.switch_to.window(new_tab)
-                                driver.close()
-                                driver.switch_to.window(base_tab)
-
-                            # If renaming was successful we log the download to the db
-                            if issue_file:
-                                date_parts = issue_date.split(".")
-                                issue_unix_date = datetime.datetime(day=int(date_parts[0]), month=int(date_parts[1]),
-                                                                    year=int(date_parts[2]))
-
-                                self.__issue_handler.create(title=issue_title, type=issue_type, number=issue_number,
-                                                            file=issue_file, date=issue_unix_date)
-
+                # Extract and handle download links.
+                self.extract_download_links(driver.page_source, issue_type)
 
                 # We have to re-find the pagination list because the DOM has been rebuilt.
                 pages = driver.find_elements_by_class_name("pagination_field")
@@ -159,39 +118,56 @@ class Loader:
                     pages[current_page + 1].click()
                     time.sleep(1)
 
+    def handle_download(self, download_page, params):
 
-    # Renames the downloaded pdfs from document.pdf to a more relevant title
-    def rename_latest_download(self, title, original_name = 'document.pdf'):
-        directory = os.getcwd()
+        # First we get the redirect link from the download page
+        html = Helper.get_url_contents(download_page)
+        beautiful_soup = BeautifulSoup(html, "html.parser")
+        meta = beautiful_soup.find("meta", {"http-equiv": "REFRESH"})
+        download_link = meta['content'].replace("0;url=", "")
 
-        destination = directory + '\\pdfs\\' + title + '.pdf'
-        list_of_files = glob.glob(directory + '\\pdfs\\*.pdf')
-        latest_file = max(list_of_files, key=os.path.getctime)
+        # We do the same process twice because it involves 2 redirects.
+        beautiful_soup = BeautifulSoup(Helper.get_url_contents(download_link), "html.parser")
+        meta = beautiful_soup.find("meta", {"http-equiv": "REFRESH"})
+        download_link = meta['content'].replace("0;url=", "")
 
-        if os.path.isfile(destination):
-            print("Destination file already exists")
-            return
+        if Helper.download(download_link, params['issue_title'] + ".pdf", self.download_folder):
+            issue_file = os.path.join(self.download_folder, params['issue_title'] + ".pdf")
+            self.__issue_handler.create(params['issue_title'], params['issue_type'], params['issue_number'],
+                                        issue_file, params['issue_date'])
 
-        success = False
+    def extract_download_links(self, html, issue_type):
 
-        # We'll try 5 times in case the file hasn't been downloaded yet
-        tries = 5
-        while tries > 0:
-            try:
-                os.rename(latest_file, destination)
-                success = True
-                break
-            except WindowsError as e:
-                print("Problem occured with the saving of: " + title)
+        beautiful_soup = BeautifulSoup(html, "html.parser")
+        result_table = beautiful_soup.find("table", {"id": "result_table"})
+        rows = result_table.find_all("tr")
 
-            tries -= 1
-            time.sleep(0.5)
+        # We ignore the first 2 rows and the last one
+        for row in rows[2:-1]:
+            cells = row.find_all("td")
+            info_cell = cells[1].find("b")
+            download_cell = cells[2]
 
-        # Returns the relative file location on success
-        if success:
-            return '\\pdfs\\' + title + '.pdf'
-        else:
-            return False
+            info_cell_text = info_cell.get_text()
+            info_cell_text = ' '.join(info_cell_text.split())
+            info_cell_parts = info_cell_text.split(" - ")
+
+            issue_title = info_cell_text
+            issue_date = info_cell_parts[1]
+            issue_number = re.sub(pattern=r'ΦΕΚ ([Α-Ω]?.?)+ ', repl="", string=issue_title)
+
+            # Skip saved items
+            if self.__issue_handler.load_by_title(issue_title):
+                continue
+
+            date_parts = issue_date.split(".")
+            issue_unix_date = datetime.datetime(day=int(date_parts[0]), month=int(date_parts[1]),
+                                                year=int(date_parts[2]))
+
+            download_link = "http://www.et.gr" + download_cell.find_all("a")[1]['href']
+            params = {"issue_title": issue_title, "issue_date": issue_unix_date, "issue_number": issue_number,
+                      "issue_type": issue_type}
+            self.handle_download(download_link, params)
 
     def scrape_pdfs(self):
 
