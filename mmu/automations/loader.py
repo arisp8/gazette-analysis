@@ -3,6 +3,7 @@ import re
 from selenium import webdriver
 from selenium.webdriver.common.keys import Keys
 from selenium.webdriver.support.ui import Select
+from selenium.common.exceptions import ElementNotVisibleException
 from bs4 import BeautifulSoup
 import os
 import errno
@@ -64,9 +65,12 @@ class Loader:
         year_select = Select(driver.find_element_by_name("year"))
         year_select.select_by_value(str(year))
 
-        # Checks the box for this certain type of issues
-        driver.find_element_by_name("chbIssue_" + str(type)).click()
-
+        try:
+            # Checks the box for this certain type of issues
+            driver.find_element_by_name("chbIssue_" + str(type)).click()
+        except ElementNotVisibleException as e:
+            print("This type of issues is not available.")
+            return
 
         while additional_issues:
 
