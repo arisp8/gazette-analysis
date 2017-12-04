@@ -43,6 +43,7 @@ class Loader:
     def find_start_number(self, type, year):
         conditions = {"type": [type], "date": [Helper.date_to_unix_timestamp(year), '>']}
         issues = self.__issue_handler.load_all(conditions=conditions)
+
         return len(issues)
 
     def download_all_issues(self, type, year):
@@ -153,7 +154,7 @@ class Loader:
         for row in rows[2:-1]:
             cells = row.find_all("td")
             info_cell = cells[1].find("b")
-            download_cell = cells[2]
+            download_cell = cells[2].find_all("a")
 
             info_cell_text = info_cell.get_text()
             info_cell_text = ' '.join(info_cell_text.split())
@@ -171,7 +172,8 @@ class Loader:
             issue_unix_date = datetime.datetime(day=int(date_parts[0]), month=int(date_parts[1]),
                                                 year=int(date_parts[2]))
 
-            download_link = "http://www.et.gr" + download_cell.find_all("a")[1]['href']
+            download_path = download_cell[1]['href'] if len(download_cell) > 1 else download_cell[0]['href']
+            download_link = "http://www.et.gr" + download_path
             params = {"issue_title": issue_title, "issue_date": issue_unix_date, "issue_number": issue_number,
                       "issue_type": issue_type}
             self.handle_download(download_link, params)
