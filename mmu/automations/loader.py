@@ -40,6 +40,11 @@ class Loader:
     def file_exists(self, directory, file_name, file_extension = 'pdf'):
         return os.path.isfile(os.getcwd() + "\\" + directory + "\\" + file_name + '.' + file_extension)
 
+    def find_start_number(self, type, year):
+        conditions = {"type": [type], "date": [Helper.date_to_unix_timestamp(year), '>']}
+        issues = self.__issue_handler.load_all(conditions=conditions)
+        return len(issues)
+
     def download_all_issues(self, type, year):
 
         driver = self.__driver
@@ -48,8 +53,11 @@ class Loader:
         # Indicates whether or not more searches will be needed to find all results
         additional_issues = True
 
+        # Find the issue type
+        issue_type = driver.find_element_by_id("label-issue-id-" + str(type)).text
+
         # Indicates at which issue the next search must start
-        num_start = 0
+        num_start = self.find_start_number(issue_type, str(year))
 
         # Selects the year of the issues
         year_select = Select(driver.find_element_by_name("year"))
@@ -58,7 +66,6 @@ class Loader:
         # Checks the box for this certain type of issues
         driver.find_element_by_name("chbIssue_" + str(type)).click()
 
-        issue_type = driver.find_element_by_id("label-issue-id-" + str(type)).text
 
         while additional_issues:
 
