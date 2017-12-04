@@ -29,7 +29,7 @@ class Helper:
     # Performs an http request and returns the response
     def get_url_contents(link, content_type=''):
         try:
-            with urllib.request.urlopen(link) as url:
+            with urllib.request.urlopen(link, data=None, timeout=120) as url:
                 response = url.read().decode("utf-8")
 
                 if content_type == 'json':
