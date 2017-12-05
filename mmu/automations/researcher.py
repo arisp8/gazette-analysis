@@ -278,8 +278,8 @@ class Researcher:
 
     # Finds information from wikipedia (if available) on a person given his name
     def research_person(self, name):
-        # For now on just saves a person's name without doing any additional research
-        # @todo: Find people's political party and birthdate
+        normalized_name = self.__helper.normalize_greek_name(name)
+        person = self.__person_handler.load_by_name(normalized_name)
 
         wiki_search = self.wiki_search(name, 1)
         link = wiki_search[3][0] if len(wiki_search[3]) > 0 else wiki_search[3]
@@ -296,10 +296,7 @@ class Researcher:
             if 'πολιτικό κόμμα' in synopsis:
                 political_party = synopsis['πολιτικό κόμμα']
 
-        normalized_name = self.__helper.normalize_greek_name(name)
-
         # Make sure to avoid duplicate saving
-        person = self.__person_handler.load_by_name(normalized_name)
         if not person:
             self.__person_handler.create(normalized_name, political_party, birthdate)
 
