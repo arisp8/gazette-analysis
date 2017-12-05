@@ -9,10 +9,18 @@ from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfpage import PDFPage
 
+from timeit import default_timer as timer
+
 class CustomPDFParser:
 
     def __init__(self):
         self.__project_path = os.getcwd()
+        self.rsrcmgr = PDFResourceManager()
+        self.retstr = io.StringIO()
+        self.laparams = LAParams()
+        self.codec = 'utf-8'
+        self.device = TextConverter(self.rsrcmgr, self.retstr, codec=self.codec, laparams=self.laparams)
+        self.interpreter = PDFPageInterpreter(self.rsrcmgr, self.device)
 
     def get_pdf_text(self, file_name):
         try:
@@ -48,13 +56,9 @@ class CustomPDFParser:
         return images
 
     def convert_pdf_to_txt(self, path):
-        rsrcmgr = PDFResourceManager()
-        retstr = io.StringIO()
-        codec = 'utf-8'
-        laparams = LAParams()
-        device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
+        start = timer()
         fp = open(path, 'rb')
-        interpreter = PDFPageInterpreter(rsrcmgr, device)
+
         password = ""
         maxpages = 0
         caching = True
@@ -64,11 +68,18 @@ class CustomPDFParser:
                                       password=password,
                                       caching=caching,
                                       check_extractable=True):
-            interpreter.process_page(page)
+            self.interpreter.process_page(page)
 
-        text = retstr.getvalue()
+        text = self.retstr.getvalue()
 
+        # Close the pdf file
         fp.close()
-        device.close()
-        retstr.close()
+
+        end = timer()
+        print(end - start)
         return text
+
+    # Closes the io elements used in here to avoid a resource leak
+    def close(self):
+        self.device.close()
+        self.retstr.close()

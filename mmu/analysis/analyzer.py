@@ -4,6 +4,7 @@ from mmu.db.handlers.signatures import RawSignatureHandler
 from mmu.db.handlers.person import PersonHandler
 from mmu.automations.researcher import Researcher
 from mmu.analysis.pdf_parser import CustomPDFParser
+from mmu.utility.helper import Helper
 import re
 import json
 
@@ -186,7 +187,7 @@ class Analyzer:
 
                 if text_signatures:
                     for signature in text_signatures:
-                        name = signature['name']
+                        name = Helper.normalize_greek_name(signature['name'])
                         role = signature['role']
                         person = self.load_person_by_name(name)
                         db_signature = self.load_signature_from_issue(issue_id, name)
@@ -204,3 +205,6 @@ class Analyzer:
                             self.__raw_signature_handler.create(person_name, role, issue_title, issue_date)
 
                         self.__issue_handler.set_analyzed(issue_id)
+
+        # After analysis has finished we close the pdf parser
+        self.__pdf_analyzer.close()
