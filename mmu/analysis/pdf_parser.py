@@ -1,4 +1,5 @@
 import os
+import re
 import io
 
 from subprocess import call
@@ -19,6 +20,7 @@ class CustomPDFParser:
 
         self.retstr = io.StringIO()
         self.laparams = LAParams()
+        self.__date_pattern = re.compile(r"\w+,\s+?\d{1,2}\s+?\w+\s+\d{4,4}")
 
     def get_pdf_text(self, file_name):
         try:
@@ -63,14 +65,37 @@ class CustomPDFParser:
         maxpages = 0
         caching = True
         pagenos = set()
-        pages = 0
+        pages = PDFPage.get_pages(fp, pagenos, maxpages=maxpages, password=password, caching=caching,
+                                  check_extractable=True)
 
-        for page in PDFPage.get_pages(fp, pagenos, maxpages=maxpages,
-                                      password=password,
-                                      caching=caching,
-                                      check_extractable=True):
-            pages += 1
+        # Analyze first page to get a feel of what's going on
+        first_page = next(pages)
+        interpreter.process_page(first_page)
+
+        # Save pages to RAM to interpret only the last 3 ones
+        temp_pages = []
+
+        # Get the first page's text
+        text = self.retstr.getvalue()
+        num_signature_points = 1
+        if 'ΠΕΡΙΕΧΟΜΕΝΑ' in text:
+            indexes = re.findall('[0-9] \n', text[120:350])
+            num_signature_points = len(indexes)
+
+        for page in pages:
+            temp_pages.append(page)
+
+        # Goes through the pages in reverse until if finds the stopword(s)
+        signature_points_found = 0
+        for page in reversed(temp_pages):
             interpreter.process_page(page)
+            current_text = self.retstr.getvalue()
+
+            if 'Οι Υπουργοί' in current_text or self.__date_pattern.findall(current_text):
+                signature_points_found += 1
+
+            if signature_points_found == num_signature_points:
+                break
 
         text = self.retstr.getvalue()
 
