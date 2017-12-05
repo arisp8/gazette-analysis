@@ -83,9 +83,8 @@ class Analyzer:
         # Ending indexes are useful when available, but availability is not guaranteed
         ending_indexes = self.find_all(end_key, text)
 
+        persons = []
         for key, index in enumerate(starting_indexes):
-            persons = []
-
             # Indicates whether or not the substring contains non-required information after the signatures
             # Is True when a valid ending index has been found
             end = (key < len(ending_indexes) and ending_indexes[key] > index)
@@ -144,7 +143,7 @@ class Analyzer:
             if temp_name and role:
                 persons.append({"role": self.format_role(role), "name": temp_name})
 
-            return persons
+        return persons
 
 
     def load_signature_from_issue(self, issue_id, person_name):
@@ -171,7 +170,7 @@ class Analyzer:
     def start_analysis(self):
         # Loads all issues not yet analyzed
         # issues = self.__issue_handler.load_all({'analyzed' : [0]})
-        issues = [self.__issue_handler.load_random({'analyzed': [0]})]
+        issues = [self.__issue_handler.load_by_title("ΦΕΚ A 44 - 31.03.2017")]
 
         if not issues or issues[0] == None:
             return
