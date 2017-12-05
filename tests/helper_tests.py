@@ -1,6 +1,7 @@
 import unittest
 from mmu.utility.helper import Helper
 import datetime
+import re
 
 class HelperTest(unittest.TestCase):
 
@@ -20,6 +21,7 @@ class HelperTest(unittest.TestCase):
         # Testing date conversion with random strings interfering
         self.assertEqual(Helper.date_to_unix_timestamp("21 Ιανουαρίου 1972τεστ"), datetime.datetime(1972, 1, 21))
         self.assertEqual(Helper.date_to_unix_timestamp("1983rr"), datetime.datetime(1983, 1, 1))
+        self.assertEqual(Helper.date_to_unix_timestamp("1919 ή 1918"), datetime.datetime(1919, 1, 1))
 
     def test_clear_annotations(self):
         self.assertEqual(Helper.clear_annotations("Κινδυνεύει με αφανισμό (IUCN 3.1) [1]"), "Κινδυνεύει με αφανισμό (IUCN 3.1) ")
