@@ -116,7 +116,8 @@ class Loader:
 
             # Gets the pagination list items
             pages = driver.find_elements_by_class_name("pagination_field")
-            num_pages = len(pages)
+            # If there's no paginations then there's one page (max)
+            num_pages = len(pages) if len(pages) else 1
 
             for current_page in range(0, num_pages):
 
@@ -149,13 +150,24 @@ class Loader:
                                         issue_file, params['issue_date'])
 
     def extract_download_links(self, html, issue_type):
-
+        print("HEY THERE!")
         beautiful_soup = BeautifulSoup(html, "html.parser")
         result_table = beautiful_soup.find("table", {"id": "result_table"})
         rows = result_table.find_all("tr")
 
-        # We ignore the first 2 rows and the last one
-        for row in rows[2:-1]:
+        if result_table.find("ul", {"id": "sitenav"}):
+            start_row = 2
+            end_row = -1
+        else:
+            start_row = 1
+            end_row = len(rows)
+
+        print(start_row)
+        print(end_row)
+
+        # We ignore the first 2 rows if there's pagination or the first row if there's not and the last one
+        for row in rows[start_row:end_row]:
+            print("Going through rows")
             cells = row.find_all("td")
             info_cell = cells[1].find("b")
             download_cell = cells[2].find_all("a")
@@ -166,7 +178,8 @@ class Loader:
 
             issue_title = info_cell_text
             issue_date = info_cell_parts[1]
-            issue_number = re.sub(pattern=r'ΦΕΚ ([Α-Ω]?.?)+ ', repl="", string=issue_title)
+            issue_title_first = issue_title.split("-")[0]
+            issue_number = re.search(pattern=r'\d+', string=issue_title_first).group(0)
 
             # Skip saved items
             if self.__issue_handler.load_by_title(issue_title):
