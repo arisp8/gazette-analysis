@@ -23,6 +23,9 @@ class Helper:
             if accent in name:
                 name =  name.replace(accent, replace_accents[accent])
 
+        # Remove characters that should not belong in the name
+        name = re.sub("[^Α-ΩΪΫ\s]+", "", name)
+
         return name
 
     @staticmethod
