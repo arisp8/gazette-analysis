@@ -54,8 +54,11 @@ class TransactionHandler:
         else:
             return "'" + str(value) + "'"
 
-    def format_conditions(self, table, conditions = None):
-        formatted_conditions = "WHERE "
+    def format_conditions(self, table, conditions = None, add=False):
+        if add:
+            formatted_conditions = "AND "
+        else:
+            formatted_conditions = "WHERE "
 
         # The default case with no conditions specified will match everything
         if not conditions:
@@ -205,3 +208,17 @@ class TransactionHandler:
         query = self.select_query(table, columns, conditions, joins)
         cursor.execute(query)
         return cursor.fetchall()
+
+    # Selects a random item from a table that has a primary key
+    def select_random(self, table, conditions=None):
+        cursor = self.__db.cursor()
+        conditions = self.format_conditions(table=table, conditions=conditions, add=True)
+        query = '''
+                SELECT * FROM {table}
+                WHERE id >= (abs(random()) % (SELECT max(id) FROM {table}))
+                {conditions}
+                LIMIT 1;
+                '''.format(table=table, conditions=conditions)
+        print(query)
+        cursor.execute(query)
+        return cursor.fetchone()

@@ -24,6 +24,10 @@ class IssueHandler(TransactionHandler):
         else:
             return TransactionHandler.select_all(self, table='issues')
 
+    # Loads a random issue
+    def load_random(self, conditions=None):
+        return TransactionHandler.select_random(self, table='issues', conditions=conditions)
+
     # Given an issue's id, indicates it has been analyzed
     def set_analyzed(self, issue_id):
         params = {'analyzed': 1}

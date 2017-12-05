@@ -168,7 +168,8 @@ class Analyzer:
 
     def start_analysis(self):
         # Loads all issues not yet analyzed
-        issues = self.__issue_handler.load_all({'analyzed' : [0]})
+        # issues = self.__issue_handler.load_all({'analyzed' : [0]})
+        issues = [self.__issue_handler.load_random({'analyzed': [0]})]
 
         for issue in issues:
             issue_id = issue['id']
