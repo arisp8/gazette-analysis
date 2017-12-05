@@ -1,7 +1,6 @@
 import unittest
 from mmu.utility.helper import Helper
 import datetime
-import re
 
 class HelperTest(unittest.TestCase):
 
