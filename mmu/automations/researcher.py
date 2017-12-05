@@ -11,23 +11,7 @@ from bs4 import BeautifulSoup
 class Researcher:
 
     # Default constructor for the researcher
-    def __init__(self, year_from = None, year_to = None):
-
-        # If no limits are given, then we'll just research for this year
-        if not year_from and not year_to:
-            self.__year_from = datetime.datetime.today().year
-            self.__year_to = datetime.datetime.today().year
-        elif not year_from:
-            # If only upper or lower limits are given but not both, then the researcher will just look for that year
-            self.__year_to = year_to
-            self.__year_from = year_to
-        elif not year_to:
-            # If only upper or lower limits are given but not both, then the researcher will just look for that year
-            self.__year_from = year_from
-            self.__year_to = year_from
-        else:
-            self.__year_from = year_from
-            self.__year_to = year_to
+    def __init__(self):
 
         # Initialize ministry & cabinet handler in default database (no arguments)
         self.__ministry_handler = MinistryHandler()
@@ -90,7 +74,7 @@ class Researcher:
         try:
             table_rows = table.find_all("tr")
         except AttributeError as e:
-            print("The information table wasn't found. Additional info: " + str(e))
+            print("The information table wasn't found in {}. Additional info: {}" .format(link, str(e)))
             return {}
 
         information = {}
@@ -159,7 +143,6 @@ class Researcher:
             disbanded = Helper.date_to_unix_timestamp(params['κατάργηση'])
 
         ministry = self.__ministry_handler.load_by_name(name)
-        print(ministry)
         if not ministry:
             self.__ministry_handler.create(name, description, established, disbanded)
 
@@ -188,10 +171,12 @@ class Researcher:
 
         # Article titles that are irrelevant
         ignore_titles = ['Υπουργείο' ,'Υπουργείο Παιδείας και Πολιτισμού της Κύπρου', 'Υπουργείο Άμυνας των ΗΠΑ',
-                        'Υπουργείο Εσωτερικών (Κύπρος)', 'Υπουργείο Εσωτερικής Ασφάλειας των ΗΠΑ']
+                        'Υπουργείο Εσωτερικών (Κύπρος)', 'Υπουργείο Εσωτερικής Ασφάλειας των ΗΠΑ',
+                        'Υπουργείο Εσωτερικών Υποθέσεων (Ρωσία)']
 
 
         for key, ministry_name in enumerate(ministries_wiki[1]):
+            ministry_name = ministry_name.replace(" (Ελλάδα)", "")
             if ministry_name not in ignore_titles:
                 ministry_description = ministries_wiki[2][key]
                 wiki_link = ministries_wiki[3][key]
@@ -202,12 +187,8 @@ class Researcher:
 
     # Researches and saves information about cabinets
     def research_cabinets(self):
-        # We find the current cabinet from the official government's website
-        # current_cabinet_link = "https://government.gov.gr/kivernisi/"
 
-
-
-        # Research previous cabinet from wikipedia since I couldn't find information elsewhere
+        # Research cabinets from wikipedia
         cabinets_wiki = self.wiki_search(keyword='Κυβέρνηση', limit=75)
 
         # Article titles that are irrelevant
@@ -238,7 +219,6 @@ class Researcher:
 
             info = self.wiki_article_info(link)
 
-            print('--------------MINISTRY NAME: ' + ministry_name + '--------------------')
             for table in info:
                 # Make sure this table contains people
                 if table:
@@ -308,6 +288,6 @@ class Researcher:
 
     # Starts the research process
     def research(self):
-        # self.research_ministries()
+        self.research_ministries()
         # self.research_cabinets()
-        self.research_positions()
+        # self.research_positions()
