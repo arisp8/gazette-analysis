@@ -9,10 +9,16 @@ from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfpage import PDFPage
 
+from timeit import default_timer as timer
+
 class CustomPDFParser:
 
     def __init__(self):
         self.__project_path = os.getcwd()
+        # Initialize required objects
+
+        self.retstr = io.StringIO()
+        self.laparams = LAParams()
 
     def get_pdf_text(self, file_name):
         try:
@@ -48,27 +54,32 @@ class CustomPDFParser:
         return images
 
     def convert_pdf_to_txt(self, path):
-        rsrcmgr = PDFResourceManager()
-        retstr = io.StringIO()
+        start = timer()
         codec = 'utf-8'
-        laparams = LAParams()
-        device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=laparams)
+        rsrcmgr = PDFResourceManager()
+        device = TextConverter(rsrcmgr, self.retstr, codec=codec, laparams=self.laparams)
         fp = open(path, 'rb')
         interpreter = PDFPageInterpreter(rsrcmgr, device)
         password = ""
         maxpages = 0
         caching = True
         pagenos = set()
+        pages = 0
 
         for page in PDFPage.get_pages(fp, pagenos, maxpages=maxpages,
                                       password=password,
                                       caching=caching,
                                       check_extractable=True):
+            pages += 1
             interpreter.process_page(page)
 
-        text = retstr.getvalue()
+        text = self.retstr.getvalue()
 
         fp.close()
         device.close()
-        retstr.close()
+        end = timer()
+        print("{} seconds elapsed. Seconds divided by pages = {}".format(end - start, (end - start) / pages))
         return text
+
+    def close(self):
+        self.retstr.close()

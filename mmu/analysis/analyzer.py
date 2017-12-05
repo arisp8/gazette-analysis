@@ -181,10 +181,11 @@ class Analyzer:
             pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
 
             if pdf_text:
-                print("Extracting signatures from issue {}".format(issue_number))
+                print("Extracting signatures from issue {}".format(issue_title))
                 text_signatures = self.extract_signatures_from_text(pdf_text)
 
                 if text_signatures:
+                    print("{} signatures found.".format(len(text_signatures)))
                     for signature in text_signatures:
                         name = signature['name']
                         role = signature['role']
@@ -204,3 +205,5 @@ class Analyzer:
                             self.__raw_signature_handler.create(person_name, role, issue_title, issue_date)
 
                         self.__issue_handler.set_analyzed(issue_id)
+
+        self.__pdf_analyzer.close()
