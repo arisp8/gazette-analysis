@@ -30,8 +30,7 @@ class CustomPDFParser:
 
     # Uses libpoppler's pdfimages tool to extract all images from the pdf and then uses PIL to convert from ppm to jpg
     # @return A list of image paths extracted from this pdf
-    def get_pdf_images(self, file_name, id):
-        file_path = self.__project_path + file_name
+    def get_pdf_images(self, file_path, id):
         directory = self.__project_path + '\\images\\' + str(id)
         images = []
         if not os.path.exists(directory):
@@ -78,7 +77,7 @@ class CustomPDFParser:
         fp.close()
         device.close()
         end = timer()
-        print("{} seconds elapsed. Seconds divided by pages = {}".format(end - start, (end - start) / pages))
+        print("{} seconds elapsed.".format(end - start))
         return text
 
     def close(self):
