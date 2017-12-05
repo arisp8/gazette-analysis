@@ -23,10 +23,12 @@ class Researcher:
 
     # Uses wikipedia's API to perform searches and returns the results from the JSON response as a list
     def wiki_search(self, keyword, limit = 10, lang = 'el'):
+
         link = "https://{lang}.wikipedia.org/w/api.php?"
         f = {'action' : 'opensearch', 'search' : keyword, 'limit' : limit, 'namespace' : 0,
              'format' : 'json', 'profile' : 'fuzzy'}
         link = link.format(lang=lang) + urllib.parse.urlencode(f)
+
         return Helper.get_url_contents(link, 'json')
 
     # Clears text from useless remaining markup elements
@@ -279,15 +281,30 @@ class Researcher:
         # For now on just saves a person's name without doing any additional research
         # @todo: Find people's political party and birthdate
 
+        wiki_search = self.wiki_search(name, 1)
+        link = wiki_search[3][0] if len(wiki_search[3]) > 0 else wiki_search[3]
+
+        birthdate = 0
+        political_party = ""
+
+        if link:
+            synopsis = self.wiki_synopsis_info(link)
+
+            if 'γέννηση' in synopsis:
+                birthdate = Helper.date_to_unix_timestamp(synopsis['γέννηση'])
+
+            if 'πολιτικό κόμμα' in synopsis:
+                political_party = synopsis['πολιτικό κόμμα']
+
         normalized_name = self.__helper.normalize_greek_name(name)
 
         # Make sure to avoid duplicate saving
         person = self.__person_handler.load_by_name(normalized_name)
         if not person:
-            self.__person_handler.create(normalized_name, "", 0)
+            self.__person_handler.create(normalized_name, political_party, birthdate)
 
     # Starts the research process
     def research(self):
         self.research_ministries()
-        # self.research_cabinets()
-        # self.research_positions()
+        self.research_cabinets()
+        self.research_positions()
