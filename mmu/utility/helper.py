@@ -104,7 +104,8 @@ class Helper:
         elif re.match('[0-9]{1,2}/[0-9]{1,2}/[0-9]{,4}', date):
             separator = "/"
         elif re.match('[0-9]{4,4}', date):
-            return datetime.datetime(year=int(date), month=1, day=1)
+            # Remove non numeric elements from string
+            return datetime.datetime(year=int(re.sub("[^0-9]+", "", date)), month=1, day=1)
         else:
             return 0
         date = Helper.clear_annotations(date)
@@ -123,7 +124,8 @@ class Helper:
             month = 1
 
         if y < len(parts):
-            year = parts[y]
+            # Remove non numeric elements from string
+            year = re.sub("[^0-9]+", "", parts[y])
         else:
             return 0
 
