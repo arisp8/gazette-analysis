@@ -17,6 +17,10 @@ class HelperTest(unittest.TestCase):
         self.assertEqual(Helper.date_to_unix_timestamp("21-08-1998"), datetime.datetime(1998, 8, 21))
         self.assertEqual(Helper.date_to_unix_timestamp("21/08/1998"), datetime.datetime(1998, 8, 21))
 
+        # Testing date conversion with random strings interfering
+        self.assertEqual(Helper.date_to_unix_timestamp("21 Ιανουαρίου 1972τεστ"), datetime.datetime(1972, 1, 21))
+        self.assertEqual(Helper.date_to_unix_timestamp("1983rr"), datetime.datetime(1983, 1, 1))
+
     def test_clear_annotations(self):
         self.assertEqual(Helper.clear_annotations("Κινδυνεύει με αφανισμό (IUCN 3.1) [1]"), "Κινδυνεύει με αφανισμό (IUCN 3.1) ")
 
