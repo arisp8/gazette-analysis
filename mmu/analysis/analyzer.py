@@ -19,7 +19,7 @@ class Analyzer:
         self.__raw_signature_handler = RawSignatureHandler()
 
         # Compile regular expressions that will be used a lot
-        self.__date_pattern = re.compile(r"[α-ωΑ-Ωά-ώϊ-ϋΐ-ΰ]+,\s+?[0-9]{1,2}\s+?[α-ζΑ-Ζά-ώϊ-ϋΐ-ΰ]+\s+?[0-9]{4,4}")
+        self.__date_pattern = re.compile(r"\w+,\s+?\d{1,2}\s+?\w+\s+\d{4,4}")
         self.__illegal_chars = re.compile(r"\d+")
         self.__camel_case_patteren = re.compile("([α-ω])([Α-Ω])")
         self.__final_s_pattern = re.compile("(ς)([Α-Ωα-ωά-ώ])")
@@ -70,15 +70,10 @@ class Analyzer:
 
     # Analyzes the text from the pdf files to extract all signatures
     def extract_signatures_from_text(self, text):
-        start_keys = ["Οι Υπουργοί\n", "Οι Αναπληρωτές Υπουργοί\n"]
         end_key = "Θεωρήθηκε και τέθηκε η Μεγάλη Σφραγίδα του Κράτους."
-        starting_indexes = []
 
-        for key in start_keys:
-            starting_indexes += self.find_all(key, text)
-
-        if not starting_indexes:
-            starting_indexes = [m.start() for m in self.__date_pattern.finditer(text)]
+        # Starting indexes are found where the date pattern is matched
+        starting_indexes = [m.start() for m in self.__date_pattern.finditer(text)]
 
         # Ending indexes are useful when available, but availability is not guaranteed
         ending_indexes = self.find_all(end_key, text)
@@ -170,7 +165,7 @@ class Analyzer:
     def start_analysis(self):
         # Loads all issues not yet analyzed
         # issues = self.__issue_handler.load_all({'analyzed' : [0]})
-        issues = [self.__issue_handler.load_by_title("ΦΕΚ A 44 - 31.03.2017")]
+        issues = [self.__issue_handler.load_by_title("ΦΕΚ A 91 - 23.06.2017")]
 
         if not issues or issues[0] == None:
             return
