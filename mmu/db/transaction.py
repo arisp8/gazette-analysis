@@ -39,6 +39,41 @@ class TransactionHandler:
         cursor.execute(query, params)
         self.__db.commit()
 
+    # Builds and executes multiple INSERT statements
+    # @param table The table
+    # @param inserts A list of dictionaries of all columns and their values accordingly
+    def insert_multiple(self, table, inserts):
+        cursor = self.__db.cursor()
+
+        for params in inserts:
+
+            columns = ""
+            values = ""
+            separator = ","
+            count = 0
+
+            # Build the query from the parameters
+            for column_name in params:
+
+                # Doesn't use a comma after the last element
+                if count == len(params) - 1:
+                    separator = ""
+
+                columns += column_name + separator
+                values += ":" + column_name + separator
+
+                count += 1
+                query = '''
+                        INSERT INTO {t} ({c}) 
+                        VALUES({v})
+                    '''.format(t=table, c=columns, v=values)
+
+            # Execute the query
+            cursor.execute(query, params)
+
+        # Commits changes after all inserts are finished
+        self.__db.commit()
+
     def is_number(self, s):
         try:
             float(s)

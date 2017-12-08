@@ -7,6 +7,7 @@ from mmu.analysis.pdf_parser import CustomPDFParser
 from mmu.utility.helper import Helper
 import re
 import json
+from timeit import default_timer as timer
 
 class Analyzer:
 
@@ -19,7 +20,6 @@ class Analyzer:
         self.__raw_signature_handler = RawSignatureHandler()
 
         # Compile regular expressions that will be used a lot
-        self.__date_pattern = re.compile(r"[α-ωΑ-Ωά-ώϊ-ϋΐ-ΰ]+,\s+?[0-9]{1,2}\s+?[α-ζΑ-Ζά-ώϊ-ϋΐ-ΰ]+\s+?[0-9]{4,4}")
         self.__illegal_chars = re.compile(r"\d+")
         self.__camel_case_patteren = re.compile("([α-ω])([Α-Ω])")
         self.__final_s_pattern = re.compile("(ς)([Α-Ωα-ωά-ώ])")
@@ -69,7 +69,7 @@ class Analyzer:
         return final_word.strip()
 
     # Analyzes the text from the pdf files to extract all signatures
-    def extract_signatures_from_text(self, text):
+    def extract_signatures_from_text(self, text, year):
         start_keys = ["Οι Υπουργοί\n", "Οι Αναπληρωτές Υπουργοί\n"]
         end_key = "Θεωρήθηκε και τέθηκε η Μεγάλη Σφραγίδα του Κράτους."
         starting_indexes = []
@@ -78,7 +78,7 @@ class Analyzer:
             starting_indexes += self.find_all(key, text)
 
         if not starting_indexes:
-            starting_indexes = [m.start() for m in self.__date_pattern.finditer(text)]
+            starting_indexes = [m.start() for m in Helper.date_match(year).finditer(text)]
 
         # Ending indexes are useful when available, but availability is not guaranteed
         ending_indexes = self.find_all(end_key, text)
@@ -187,9 +187,15 @@ class Analyzer:
 
             if pdf_text:
                 print("Extracting signatures from issue {}".format(issue_title))
-                text_signatures = self.extract_signatures_from_text(pdf_text)
+                year = issue_date[0:4]
+                start = timer()
+                text_signatures = self.extract_signatures_from_text(pdf_text, year)
+                end = timer()
+                print("{} seconds elapsed for extracting signatures from the text.".format(end - start))
                 if text_signatures:
                     print("{} signatures found.".format(len(text_signatures)))
+                    raw_signatures = []
+                    start = timer()
                     for signature in text_signatures:
                         name = signature['name']
                         role = signature['role']
@@ -204,9 +210,16 @@ class Analyzer:
 
                         person_name = person['name']
 
-                        # Save raw signatures each time because there may be more than one signature of the same person
-                        self.__raw_signature_handler.create(person_name, role, issue_title, issue_date)
+
+                        raw_signatures.append({'person_name': person_name, 'role': role, 'issue_title': issue_title,
+                                               'issue_date': issue_date})
+
 
                         self.__issue_handler.set_analyzed(issue_id)
+
+                    self.__raw_signature_handler.create_multiple(raw_signatures)
+                    end = timer()
+                    print("{} to save all the stuff.".format(end - start))
+
 
         self.__pdf_analyzer.close()

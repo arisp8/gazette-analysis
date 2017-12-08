@@ -64,3 +64,7 @@ class RawSignatureHandler(TransactionHandler):
     def create(self, person_name, role, issue_title, issue_date):
         params = {'person_name': person_name, 'role': role, 'issue_title': issue_title, 'issue_date' : issue_date}
         TransactionHandler.insert(self, table='raw_signatures', params=params)
+
+    # Saves multiple signatures contained in a list
+    def create_multiple(self, inserts):
+        TransactionHandler.insert_multiple(self, 'raw_signatures', inserts)

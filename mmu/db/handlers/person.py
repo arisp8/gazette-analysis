@@ -44,3 +44,5 @@ class PersonHandler(TransactionHandler):
     # Loads a position given some conditions
     def load_position(self, conditions):
         return TransactionHandler.select_one(self, 'positions', conditions=conditions)
+
+
