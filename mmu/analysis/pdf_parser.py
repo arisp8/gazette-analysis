@@ -9,6 +9,7 @@ from pdfminer.pdfinterp import PDFResourceManager, PDFPageInterpreter
 from pdfminer.converter import TextConverter
 from pdfminer.layout import LAParams
 from pdfminer.pdfpage import PDFPage
+from mmu.utility.helper import Helper
 
 from timeit import default_timer as timer
 
@@ -20,7 +21,6 @@ class CustomPDFParser:
 
         self.retstr = io.StringIO()
         self.laparams = LAParams()
-        self.__date_pattern = re.compile(r"\w+,\s+?\d{1,2}\s+?\w+\s+\d{4,4}")
 
     def get_pdf_text(self, file_name):
         try:
@@ -91,7 +91,7 @@ class CustomPDFParser:
             interpreter.process_page(page)
             current_text = self.retstr.getvalue()
 
-            if 'Οι Υπουργοί' in current_text or self.__date_pattern.findall(current_text):
+            if 'Οι Υπουργοί' in current_text or Helper.date_match().findall(current_text):
                 signature_points_found += 1
 
             if signature_points_found == num_signature_points:
@@ -102,7 +102,7 @@ class CustomPDFParser:
         fp.close()
         device.close()
         end = timer()
-        print("{} seconds elapsed.".format(end - start))
+        print("{} seconds elapsed for parsing this pdf's text.".format(end - start))
         return text
 
     def close(self):

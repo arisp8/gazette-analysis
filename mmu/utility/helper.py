@@ -11,6 +11,9 @@ import re
 # Helper class that defines useful formatting and file handling functions
 class Helper:
 
+    # Initialize empty dict for saving compiled regex objects
+    date_patterns = {}
+
     # Turns a greek name to all caps and without accents
     # @todo: Use regex or other way to speed up
     @staticmethod
@@ -133,3 +136,14 @@ class Helper:
             return 0
 
         return datetime.datetime(year=int(year), month=int(month), day=int(day))
+
+    # Returns a compiled regex object to find dates in text
+    @staticmethod
+    def date_match(year= 0):
+
+        if not year in Helper.date_patterns:
+            operator = str(year) if year != 0 else r"\d"
+            date_pattern = "\w+,\s+?\d{1,2}\s+?\w+\s+" + "{year}".format(year=operator) + "{4,4}"
+            Helper.date_patterns[year] = re.compile(date_pattern)
+
+        return Helper.date_patterns[year]
