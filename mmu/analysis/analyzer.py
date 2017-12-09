@@ -23,6 +23,7 @@ class Analyzer:
         self.__illegal_chars = re.compile(r"\d+")
         self.__camel_case_patteren = re.compile("([α-ω])([Α-Ω])")
         self.__final_s_pattern = re.compile("(ς)([Α-Ωα-ωά-ώ])")
+        self.__u_pattern = re.compile("(ύ)(και)")
 
     # Checks whether or not a string indicates that parsing should stop.
     def is_break_point(self, word):
@@ -61,6 +62,10 @@ class Analyzer:
             # If no TitleCase or camelCase was found then we address the possibility of a final s inside a word
             if len(split) == 1:
                 split = self.__final_s_pattern.sub(r'\1 \2', part).split()
+
+            # If no TitleCase or camelCase was found then we address the possibility of a final s inside a word
+            if len(split) == 1:
+                split = self.__u_pattern.sub(r'\1 \2', part).split()
 
             for word in split:
                 final_word += word + " "
@@ -169,8 +174,7 @@ class Analyzer:
 
     def start_analysis(self):
         # Loads all issues not yet analyzed
-        # issues = self.__issue_handler.load_all({'analyzed' : [0]})
-        issues = [self.__issue_handler.load_by_title("ΦΕΚ A 44 - 31.03.2017")]
+        issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': 'B'})
 
         if not issues or issues[0] == None:
             return
@@ -186,7 +190,7 @@ class Analyzer:
             pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
 
             if pdf_text:
-                print("Extracting signatures from issue {}".format(issue_title))
+                # print("Extracting signatures from issue {}".format(issue_title))
                 year = issue_date[0:4]
                 start = timer()
                 text_signatures = self.extract_signatures_from_text(pdf_text, year)
@@ -194,6 +198,7 @@ class Analyzer:
                 print("{} seconds elapsed for extracting signatures from the text.".format(end - start))
                 if text_signatures:
                     print("{} signatures found.".format(len(text_signatures)))
+                    print(issue_title, text_signatures)
                     raw_signatures = []
                     start = timer()
                     for signature in text_signatures:
@@ -220,6 +225,9 @@ class Analyzer:
                     self.__raw_signature_handler.create_multiple(raw_signatures)
                     end = timer()
                     print("{} to save all the stuff.".format(end - start))
+
+                else:
+                    print(issue_title, " has no relevant signatures.")
 
 
         self.__pdf_analyzer.close()
