@@ -44,8 +44,8 @@ class TransactionHandler:
     # @param inserts A list of dictionaries of all columns and their values accordingly
     def insert_multiple(self, table, inserts):
         cursor = self.__db.cursor()
-
-        for params in inserts:
+        query = ""
+        for params in inserts[0:1]:
 
             columns = ""
             values = ""
@@ -64,12 +64,12 @@ class TransactionHandler:
 
                 count += 1
                 query = '''
-                        INSERT INTO {t} ({c}) 
-                        VALUES({v})
-                    '''.format(t=table, c=columns, v=values)
+                    INSERT INTO {t} ({c}) 
+                    VALUES({v})
+                '''.format(t=table, c=columns, v=values)
 
-            # Execute the query
-            cursor.execute(query, params)
+        # Execute the query
+        cursor.executemany(query, inserts)
 
         # Commits changes after all inserts are finished
         self.__db.commit()
