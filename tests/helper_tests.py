@@ -26,5 +26,9 @@ class HelperTest(unittest.TestCase):
         self.assertEqual(Helper.clear_annotations("Κινδυνεύει με αφανισμό (IUCN 3.1) [1]"), "Κινδυνεύει με αφανισμό (IUCN 3.1) ")
 
 
+    def test_date_match(self):
+        test = "Αθήνα, 18 Ιανουαρίου 2017"
+        self.assertTrue(Helper.date_match(2017).match(test) is not None)
+
 if __name__ == '__main__':
     unittest.main()

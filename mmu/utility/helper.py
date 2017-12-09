@@ -142,8 +142,8 @@ class Helper:
     def date_match(year= 0):
 
         if not year in Helper.date_patterns:
-            operator = str(year) if year != 0 else r"\d"
-            date_pattern = "\w+,\s+?\d{1,2}\s+?\w+\s+" + "{year}".format(year=operator) + "{4,4}"
+            operator = str(year) if year != 0 else r"\d{4,4}"
+            date_pattern = "\w+,\s+?\d{1,2}\s+?\w+\s+" + "{year}".format(year=operator)
             Helper.date_patterns[year] = re.compile(date_pattern)
 
         return Helper.date_patterns[year]
