@@ -33,11 +33,11 @@ class CustomPDFParser:
     # Uses libpoppler's pdfimages tool to extract all images from the pdf and then uses PIL to convert from ppm to jpg
     # @return A list of image paths extracted from this pdf
     def get_pdf_images(self, file_path, id):
-        directory = self.__project_path + '\\images\\' + str(id)
+        directory = self.__project_path + '/images/' + str(id)
         images = []
         if not os.path.exists(directory):
             os.makedirs(directory)
-            call(['pdfimages', file_path, directory +  "\\" + str(id)])
+            call(['pdfimages', file_path, directory +  "/" + str(id)])
 
         files = os.listdir(directory)
 
