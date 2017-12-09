@@ -34,7 +34,8 @@ class Loader:
         chromeOptions.add_experimental_option("prefs", prefs)
 
         # @todo: Replace hard paths with relative paths and make sure that all needed stuff is downloaded in setup
-        self.__driver = webdriver.Chrome(r"C:\Users\user\Documents\Aris\chromedriver.exe", chrome_options=chromeOptions)
+        self.__driver = webdriver.Chrome(os.path.join(os.getcwd() + "/../", "drivers/chromedriver"),
+                                         chrome_options=chromeOptions)
 
         self.__issue_handler = IssueHandler()
 
@@ -150,7 +151,6 @@ class Loader:
                                         issue_file, params['issue_date'])
 
     def extract_download_links(self, html, issue_type):
-        print("HEY THERE!")
         beautiful_soup = BeautifulSoup(html, "html.parser")
         result_table = beautiful_soup.find("table", {"id": "result_table"})
         rows = result_table.find_all("tr")
@@ -162,12 +162,8 @@ class Loader:
             start_row = 1
             end_row = len(rows)
 
-        print(start_row)
-        print(end_row)
-
         # We ignore the first 2 rows if there's pagination or the first row if there's not and the last one
         for row in rows[start_row:end_row]:
-            print("Going through rows")
             cells = row.find_all("td")
             info_cell = cells[1].find("b")
             download_cell = cells[2].find_all("a")
