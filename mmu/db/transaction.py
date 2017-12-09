@@ -5,10 +5,10 @@ import os
 class TransactionHandler:
 
     def __init__(self, db_name = 'default'):
-        self.__db = sqlite3.connect(os.path.dirname(os.path.realpath(__file__)) + '/../data/' + db_name)
+        data_dir = os.path.abspath(os.path.join(os.path.dirname( __file__ ), '..', 'data'))
+        self.__db = sqlite3.connect(data_dir + "/" + db_name)
         # Sets the function that turns tuples into key-value dictionaries
         self.__db.row_factory = self.dict_factory
-
 
     # Builds an INSERT statement for the SQLite database using the parameters specified in params
     # @param table The table
