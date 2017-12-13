@@ -17,9 +17,8 @@ class CustomPDFParser:
 
     def __init__(self):
         self.__project_path = os.getcwd()
-        # Initialize required objects
 
-        self.retstr = io.StringIO()
+        # Initialize required objects
         self.laparams = LAParams()
 
     def get_pdf_text(self, file_name):
@@ -58,7 +57,8 @@ class CustomPDFParser:
         start = timer()
         codec = 'utf-8'
         rsrcmgr = PDFResourceManager()
-        device = TextConverter(rsrcmgr, self.retstr, codec=codec, laparams=self.laparams)
+        retstr = io.StringIO()
+        device = TextConverter(rsrcmgr, retstr, codec=codec, laparams=self.laparams)
         fp = open(path, 'rb')
         interpreter = PDFPageInterpreter(rsrcmgr, device)
         password = ""
@@ -76,7 +76,7 @@ class CustomPDFParser:
         temp_pages = []
 
         # Get the first page's text
-        text = self.retstr.getvalue()
+        text = retstr.getvalue()
         num_signature_points = 1
         if 'ΠΕΡΙΕΧΟΜΕΝΑ' in text:
             indexes = re.findall('[0-9] \n', text[120:350])
@@ -89,7 +89,7 @@ class CustomPDFParser:
         signature_points_found = 0
         for page in reversed(temp_pages):
             interpreter.process_page(page)
-            current_text = self.retstr.getvalue()
+            current_text = retstr.getvalue()
 
             if 'Οι Υπουργοί' in current_text or Helper.date_match().findall(current_text):
                 signature_points_found += 1
@@ -97,13 +97,10 @@ class CustomPDFParser:
             if signature_points_found == num_signature_points:
                 break
 
-        text = self.retstr.getvalue()
+        text = retstr.getvalue()
 
         fp.close()
         device.close()
         end = timer()
         print("{} seconds elapsed for parsing this pdf's text.".format(end - start))
         return text
-
-    def close(self):
-        self.retstr.close()
