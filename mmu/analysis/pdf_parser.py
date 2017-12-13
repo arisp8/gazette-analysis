@@ -75,7 +75,7 @@ class CustomPDFParser:
         except StopIteration:
             print("The pdf document may be damaged")
             return
-        
+
         # Save pages to RAM to interpret only the last 3 ones
         temp_pages = []
 
@@ -95,7 +95,9 @@ class CustomPDFParser:
             interpreter.process_page(page)
             current_text = retstr.getvalue()
 
-            if 'Οι Υπουργοί' in current_text or Helper.date_match().findall(current_text):
+            if 'Οι Υπουργοί' in current_text or Helper.date_match().findall(current_text) \
+                    or 'ΟΙ ΥΠΟΥΡΓΟΙ' in current_text:
+
                 signature_points_found += 1
 
             if signature_points_found == num_signature_points:
