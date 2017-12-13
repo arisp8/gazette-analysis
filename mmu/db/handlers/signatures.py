@@ -49,7 +49,7 @@ class RawSignatureHandler(TransactionHandler):
 
     # Loads all signatures by person_name when given conditions are matched
     def load_all_by_person_name(self, person_name):
-        conditions = {'person_name': person_name}
+        conditions = {'person_name': [person_name]}
         return TransactionHandler.select_all(self, table='raw_signatures', conditions=conditions)
 
     # Selects (up to) one signature that matches the conditions given
@@ -57,8 +57,8 @@ class RawSignatureHandler(TransactionHandler):
         return TransactionHandler.select_one(self, table='raw_signatures', conditions=conditions)
 
     # Selects all signatures that match the conditions given
-    def load_all(self, conditions=None):
-        return TransactionHandler.select_all(self, table='raw_signatures', conditions=conditions)
+    def load_all(self, conditions=None, group_by=None):
+        return TransactionHandler.select_all(self, table='raw_signatures', conditions=conditions, group_by=group_by)
 
     # Saves a signature in the sqlite database
     def create(self, person_name, role, issue_title, issue_date):
@@ -68,3 +68,7 @@ class RawSignatureHandler(TransactionHandler):
     # Saves multiple signatures contained in a list
     def create_multiple(self, inserts):
         TransactionHandler.insert_multiple(self, 'raw_signatures', inserts)
+
+    # Updates database entries that match given conditions changing their values to given params
+    def update(self, params, conditions=None):
+        TransactionHandler.update(self, 'raw_signatures', params, conditions)

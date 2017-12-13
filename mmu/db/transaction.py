@@ -183,8 +183,7 @@ class TransactionHandler:
     # @param condtions A dictionary containing conditions in the format:
     #   condition_name : [condition_value, operator, separator]. If separator is not given AND will be used
     # @param joins A dictionary in the format table_name : [INNER/LEFT,ON]
-    # @TODO: Possibly allow adding LIMIT start, offset
-    def select_query(self, table, columns = None, conditions = None, joins = None):
+    def select_query(self, table, columns=None, conditions=None, joins=None, group_by=None):
 
         # If no columns are given we'll select all columns
         formatted_columns = "*"
@@ -202,14 +201,15 @@ class TransactionHandler:
         # If no condition is given, we will match everything
         formatted_conditions = self.format_conditions(table, conditions)
         formatted_joins = self.format_joins(joins)
-
+        formatted_group = "GROUP BY {}".format(group_by) if group_by else ""
 
         query = '''
             SELECT {cols} 
             FROM {t} 
             {j} 
             {cond}
-        '''.format(cols=formatted_columns, t=table,j=formatted_joins,cond=formatted_conditions)
+            {group}
+        '''.format(cols=formatted_columns, t=table,j=formatted_joins,cond=formatted_conditions,group=formatted_group)
 
         return query
 
@@ -236,9 +236,9 @@ class TransactionHandler:
         return cursor.fetchmany(limit)
 
     # Selects all elements that match a query
-    def select_all(self, table, columns=None, conditions=None, joins=None):
+    def select_all(self, table, columns=None, conditions=None, joins=None, group_by=None):
         cursor = self.__db.cursor()
-        query = self.select_query(table, columns, conditions, joins)
+        query = self.select_query(table, columns, conditions, joins, group_by)
         cursor.execute(query)
         return cursor.fetchall()
 
