@@ -69,9 +69,13 @@ class CustomPDFParser:
                                   check_extractable=True)
 
         # Analyze first page to get a feel of what's going on
-        first_page = next(pages)
-        interpreter.process_page(first_page)
-
+        try:
+            first_page = next(pages)
+            interpreter.process_page(first_page)
+        except StopIteration:
+            print("The pdf document may be damaged")
+            return
+        
         # Save pages to RAM to interpret only the last 3 ones
         temp_pages = []
 

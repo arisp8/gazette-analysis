@@ -186,6 +186,9 @@ class Analyzer:
             issue_title = issue['title']
             issue_date = issue['date']
 
+            if issue_file == 'N/A':
+                continue
+
             pdf_text = self.__pdf_analyzer.get_pdf_text(issue_file)
             pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
 
@@ -220,14 +223,10 @@ class Analyzer:
                                                'issue_date': issue_date})
 
 
-                        self.__issue_handler.set_analyzed(issue_id)
 
                     self.__raw_signature_handler.create_multiple(raw_signatures)
                     end = timer()
                     print("{} to save all the stuff.".format(end - start))
-
                 else:
                     print(issue_title, " has no relevant signatures.")
-
-
-        self.__pdf_analyzer.close()
+            self.__issue_handler.set_analyzed(issue_id)
