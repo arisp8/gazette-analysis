@@ -73,9 +73,17 @@ class Analyzer:
         # Returns the word without trailing spaces
         return final_word.strip()
 
+    # Returns a list of valid start keys for a certain year's format
+    def get_start_keys(self, year):
+        if year == "2017":
+            return ["Οι Υπουργοί\n", "Οι Αναπληρωτές Υπουργοί\n"]
+        else:
+            return ["ΟΙ ΥΠΟΥΡΓΟΙ\n", "ΟΙ ΑΝΑΠΛΗΡΩΤΕΣ ΥΠΟΥΡΓΟΙ\n"]
+
+
     # Analyzes the text from the pdf files to extract all signatures
     def extract_signatures_from_text(self, text, year):
-        start_keys = ["Οι Υπουργοί\n", "Οι Αναπληρωτές Υπουργοί\n"]
+        start_keys = self.get_start_keys(year)
         end_key = "Θεωρήθηκε και τέθηκε η Μεγάλη Σφραγίδα του Κράτους."
         starting_indexes = []
 
@@ -88,6 +96,7 @@ class Analyzer:
         # Ending indexes are useful when available, but availability is not guaranteed
         ending_indexes = self.find_all(end_key, text)
 
+        # @todo: Find ministry council's members from pdf text (Τα Μέλη - Μέλη Υπουργικού Συμβουλίου)
         persons = []
         for key, index in enumerate(starting_indexes):
             # Indicates whether or not the substring contains non-required information after the signatures
@@ -172,9 +181,10 @@ class Analyzer:
         conditions = {'issue_title': [issue_title], 'person_name': [person_name]}
         return self.__raw_signature_handler.load_one(conditions=conditions)
 
-    def start_analysis(self):
+    def start_signature_extraction(self):
         # Loads all issues not yet analyzed
-        issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': 'B'})
+        issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': ['Α'],
+                                                'date': ['2017-01-01 00:00:00', '>=']})
 
         if not issues or issues[0] == None:
             return
@@ -219,10 +229,10 @@ class Analyzer:
                         person_name = person['name']
 
 
-                        raw_signatures.append({'person_name': person_name, 'role': role, 'issue_title': issue_title,
+                        raw_signatures.append({'person_name': Helper.normalize_greek_name(person_name),
+                                               'role': Helper.normalize_greek_name(role),
+                                               'issue_title': issue_title,
                                                'issue_date': issue_date})
-
-
 
                     self.__raw_signature_handler.create_multiple(raw_signatures)
                     end = timer()
@@ -230,3 +240,58 @@ class Analyzer:
                 else:
                     print(issue_title, " has no relevant signatures.")
             self.__issue_handler.set_analyzed(issue_id)
+
+    def start_analysis(self, conditions = None):
+        all_signatures = self.__raw_signature_handler.load_all(conditions)
+        print(all_signatures)
+
+        # Gets all the signatures grouped by name
+        all_names = self.__raw_signature_handler.load_all(conditions, 'person_name')
+        print(len(all_names))
+
+        for signature in all_names:
+            name = signature['person_name']
+            person_signatures = self.__raw_signature_handler.load_all_by_person_name(name)
+            role_titles = {}
+            signature['ministry'] = self.find_ministry_name_from_role(signature['role'])
+
+            # Code snippet that finds people's signatures without the middle initial
+            # name_parts = name.split(" ")
+            # if len(name_parts) > 2:
+            #     first_name = name_parts[0]
+            #     last_name = name_parts[len(name_parts) - 1]
+            #     similar_name_conditions = {'person_name': ["{f}%{l}".format(f=first_name, l=last_name), 'LIKE'],
+            #                                'raw_signatures.person_name': [name, '!=']}
+            #     same_person_different_name = self.__raw_signature_handler.load_all(conditions=similar_name_conditions)
+            #     if (same_person_different_name):
+            #         print('Test', same_person_different_name)
+
+            for sig in person_signatures:
+
+                if not sig['role'] in role_titles:
+                    role_titles[sig['role']] = 0
+
+                role_titles[sig['role']] += 1
+
+            if len(role_titles) > 1:
+                correct_role = max(role_titles, key=role_titles.get)
+                update_conditions = conditions if conditions else {}
+                update_conditions['person_name'] = [name]
+                self.__raw_signature_handler.update(params={'role': correct_role}, conditions=conditions)
+
+    def find_ministry_name_from_role(self, role):
+        role_parts = role.split(" ")
+        # stop_index = 0
+        current_title = ""
+        # We go through the words inside the role backwards. As long as it produces the same amount of results it's
+        # still the ministry title.
+        prev_num = -1
+        for part in reversed(role_parts):
+            current_title = part + " " + current_title
+            conditions = {'role': ['%' + current_title, 'LIKE']}
+            results = self.__raw_signature_handler.load_all(conditions)
+            if prev_num != -1 and prev_num != len(results):
+                break
+        if current_title != 'ΠΡΩΘΥΠΟΥΡΓΟΣ':
+            current_title = current_title.replace("ΥΦΥΠΟΥΡΓΟΣ", "").replace("ΥΠΟΥΡΓΟΣ", "").replace("ΑΝΑΠΛΗΡΩΤΗΣ", "").strip()
+        return current_title
