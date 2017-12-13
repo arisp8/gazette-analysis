@@ -10,6 +10,7 @@ import errno
 import glob
 import os.path
 import datetime
+from http.client import RemoteDisconnected
 
 from mmu.db.handlers.issue import IssueHandler
 from mmu.utility.helper import Helper
@@ -43,7 +44,8 @@ class Loader:
         return os.path.isfile(os.getcwd() + "\\" + directory + "\\" + file_name + '.' + file_extension)
 
     def find_start_number(self, type, year):
-        conditions = {"type": [type], "date": [Helper.date_to_unix_timestamp(year), '>']}
+        conditions = {"type": [type], "date": [Helper.date_to_unix_timestamp(year), '>='],
+                      "issues.date": [Helper.date_to_unix_timestamp(str(int(year) + 1)), '<']}
         issues = self.__issue_handler.load_all(conditions=conditions)
 
         return len(issues)
@@ -134,16 +136,22 @@ class Loader:
 
     def handle_download(self, download_page, params):
 
-        # First we get the redirect link from the download page
-        html = Helper.get_url_contents(download_page)
-        beautiful_soup = BeautifulSoup(html, "html.parser")
-        meta = beautiful_soup.find("meta", {"http-equiv": "REFRESH"})
-        download_link = meta['content'].replace("0;url=", "")
+        try:
+            # First we get the redirect link from the download page
+            html = Helper.get_url_contents(download_page)
+            beautiful_soup = BeautifulSoup(html, "html.parser")
+            meta = beautiful_soup.find("meta", {"http-equiv": "REFRESH"})
+            download_link = meta['content'].replace("0;url=", "")
 
-        # We do the same process twice because it involves 2 redirects.
-        beautiful_soup = BeautifulSoup(Helper.get_url_contents(download_link), "html.parser")
-        meta = beautiful_soup.find("meta", {"http-equiv": "REFRESH"})
-        download_link = meta['content'].replace("0;url=", "")
+            # We do the same process twice because it involves 2 redirects.
+            beautiful_soup = BeautifulSoup(Helper.get_url_contents(download_link), "html.parser")
+            meta = beautiful_soup.find("meta", {"http-equiv": "REFRESH"})
+            download_link = meta['content'].replace("0;url=", "")
+        except RemoteDisconnected as e:
+            print(e)
+            self.__issue_handler.create(params['issue_title'], params['issue_type'], params['issue_number'],
+                                        'N/A', params['issue_date'])
+            return
 
         if Helper.download(download_link, params['issue_title'] + ".pdf", self.download_folder):
             issue_file = os.path.join(self.download_folder, params['issue_title'] + ".pdf")
@@ -200,6 +208,10 @@ class Loader:
             if e.errno != errno.EEXIST:
                 raise
         
-        year = 2017
-        for i in self.__possible_issues:
-            self.download_all_issues(i, year)
+
+        year_start = 2016
+        year_end = 2017
+
+        for year in range(year_start, year_end + 1):
+            for i in self.__possible_issues:
+                self.download_all_issues(i, year)
