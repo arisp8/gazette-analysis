@@ -5,6 +5,7 @@ from mmu.db.handlers.person import PersonHandler
 from mmu.automations.researcher import Researcher
 from mmu.analysis.pdf_parser import CustomPDFParser
 from mmu.utility.helper import Helper
+from mmu.analysis.stats import Stats
 import re
 import json
 from timeit import default_timer as timer
@@ -183,8 +184,7 @@ class Analyzer:
 
     def start_signature_extraction(self):
         # Loads all issues not yet analyzed
-        issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': ['Α'],
-                                                'date': ['2017-01-01 00:00:00', '>=']})
+        issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': ['Α'], 'title': ['ΦΕΚ A 154 - 25.08.2016']})
 
         if not issues or issues[0] == None:
             return
@@ -199,6 +199,8 @@ class Analyzer:
             if issue_file == 'N/A':
                 continue
 
+            pdf_signatures = self.__pdf_analyzer.get_signatures_from_pdf(issue_file)
+            continue
             pdf_text = self.__pdf_analyzer.get_pdf_text(issue_file)
             pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
 
@@ -241,19 +243,18 @@ class Analyzer:
                     print(issue_title, " has no relevant signatures.")
             self.__issue_handler.set_analyzed(issue_id)
 
-    def start_analysis(self, conditions = None):
-        all_signatures = self.__raw_signature_handler.load_all(conditions)
-        print(all_signatures)
+    def prepare_analysis(self, conditions=None):
 
         # Gets all the signatures grouped by name
-        all_names = self.__raw_signature_handler.load_all(conditions, 'person_name')
-        print(len(all_names))
+        joins = {'raw_signatures': ['INNER', 'raw_signatures.issue_title = issues.title']}
+        all_names = self.__issue_handler.load_all(conditions=conditions,
+                                                  group_by='raw_signatures.person_name',
+                                                  joins=joins)
 
         for signature in all_names:
             name = signature['person_name']
             person_signatures = self.__raw_signature_handler.load_all_by_person_name(name)
             role_titles = {}
-            signature['ministry'] = self.find_ministry_name_from_role(signature['role'])
 
             # Code snippet that finds people's signatures without the middle initial
             # name_parts = name.split(" ")
@@ -279,19 +280,19 @@ class Analyzer:
                 update_conditions['person_name'] = [name]
                 self.__raw_signature_handler.update(params={'role': correct_role}, conditions=conditions)
 
-    def find_ministry_name_from_role(self, role):
-        role_parts = role.split(" ")
-        # stop_index = 0
-        current_title = ""
-        # We go through the words inside the role backwards. As long as it produces the same amount of results it's
-        # still the ministry title.
-        prev_num = -1
-        for part in reversed(role_parts):
-            current_title = part + " " + current_title
-            conditions = {'role': ['%' + current_title, 'LIKE']}
-            results = self.__raw_signature_handler.load_all(conditions)
-            if prev_num != -1 and prev_num != len(results):
-                break
-        if current_title != 'ΠΡΩΘΥΠΟΥΡΓΟΣ':
-            current_title = current_title.replace("ΥΦΥΠΟΥΡΓΟΣ", "").replace("ΥΠΟΥΡΓΟΣ", "").replace("ΑΝΑΠΛΗΡΩΤΗΣ", "").strip()
-        return current_title
+
+    def start_analysis(self, conditions = None):
+        # Prepare and sanitize data
+        self.prepare_analysis(conditions)
+
+        # Load all the issues we want to analyze
+        all_issues = self.__issue_handler.load_all(conditions=conditions)
+
+        # Group signatures by issue title
+        grouped_signatures = {}
+        for issue in all_issues:
+            issue_conditions = {'issue_title' : [issue['title']]}
+            grouped_signatures[issue['title']] = self.__raw_signature_handler.load_all(issue_conditions)
+
+
+        co_responsibilities = Stats.measure_co_responsibilities(grouped_signatures)
