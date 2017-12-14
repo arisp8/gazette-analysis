@@ -18,11 +18,8 @@ class IssueHandler(TransactionHandler):
         return TransactionHandler.select_one(self, table='issues', conditions=conditions)
 
     # Loads all issues
-    def load_all(self, conditions = {}):
-        if conditions:
-            return TransactionHandler.select_all(self, table='issues', conditions=conditions)
-        else:
-            return TransactionHandler.select_all(self, table='issues')
+    def load_all(self, conditions=None, group_by=None, joins=None):
+        return TransactionHandler.select_all(self, table='issues', conditions=conditions, joins=joins, group_by=group_by)
 
     # Loads a random issue
     def load_random(self, conditions=None):
