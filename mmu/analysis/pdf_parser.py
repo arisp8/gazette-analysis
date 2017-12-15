@@ -13,6 +13,8 @@ from pdfminer.layout import LAParams
 from pdfminer.layout import LTContainer
 from pdfminer.layout import LTTextBox
 from pdfminer.layout import LTTextLine
+from pdfminer.layout import LTAnno
+from pdfminer.layout import LTImage
 from pdfminer.layout import LTFigure
 from pdfminer.layout import LTTextBoxHorizontal
 from pdfminer.layout import LTChar
@@ -25,8 +27,8 @@ class CustomPDFParser:
 
     def __init__(self):
         self.__project_path = os.getcwd()
-
-        # Initialize required objects
+        self.__illegal_chars = re.compile(r"\d+")
+        # selfrequired objects
         self.laparams = LAParams()
 
     def get_pdf_text(self, file_name):
@@ -61,8 +63,19 @@ class CustomPDFParser:
 
         return images
 
+    # Checks whether or not a string indicates that parsing should stop.
+    def is_break_point(self, word):
+        if len(word) == 0:
+            return False
+        elif self.__illegal_chars.search(word):
+            return True
+        elif word == 'Θεωρήθηκε και τέθηκε η Μεγάλη Σφραγίδα του Κράτους.':
+            return True
+        else:
+            return False
+
     # Analyzes the structure of the pdf file to correctly extract the signatures from the document.
-    def get_signatures_from_pdf(self, path):
+    def get_signatures_from_pdf(self, path, year=None):
         codec = 'utf-8'
         rsrcmgr = PDFResourceManager()
         laparams = LAParams()
@@ -76,32 +89,97 @@ class CustomPDFParser:
         pages = PDFPage.get_pages(fp, pagenos, maxpages=maxpages, password=password, caching=caching,
                                   check_extractable=True)
 
-        # Analyze first page to get a feel of what's going on
-        try:
-            first_page = next(pages)
-            interpreter.process_page(first_page)
-        except StopIteration:
-            print("The pdf document may be damaged")
+        temp_pages = []
+        for page in pages:
+            temp_pages.append(page)
+
+        if not temp_pages:
             return
 
+        first_page = temp_pages[0]
+        interpreter.process_page(first_page)
         first_page_layout = device.get_result()
         regulations = self.get_document_info(first_page_layout)
-        print(regulations)
+        signature_sets = []
+
+
+
+        # Start from the last page until all the required signature sets are found
+        for page in reversed(temp_pages):
+            # Get the page's layout
+            interpreter.process_page(page)
+            page_layout = device.get_result()
+
+            # Split text to line's for easier parsing
+            text_lines = self.text_from_layout_objects(page_layout).split("\n")
+
+            # Boolean indicating whether we are currently in a signature set
+            # Save the data found
+            search_active = False
+            persons = []
+            role = ""
+            temp_name = ""
+
+            for line in text_lines:
+                line = line.strip()
+                if search_active:
+                    if self.is_break_point(line):
+                        if persons:
+                            break
+                        else:
+                            # Continue searching at next point, false alarm
+                            role = ""
+                            search_active = False
+
+                    if line == 'Οι Υπουργοί':
+                        continue
+
+
+                    if temp_name:
+                        role = line.replace("***", "")
+                        if role:
+                            persons.append({'role': Helper.format_role(role),
+                                            'name': Helper.normalize_greek_name(temp_name)})
+                            role = ""
+                            temp_name = ""
+                    elif '***' in line and role:
+                        name = line.replace("***", "").strip()
+                        if name:
+                            persons.append({'role': Helper.format_role(role),
+                                            'name': Helper.normalize_greek_name(name)})
+                            role = ""
+                    elif '***' in line and not role and not temp_name:
+                        temp_name = line.replace("***", "")
+                    else:
+                        role += line
+
+                elif (year in line and Helper.date_match(year).match(line)) \
+                        or (str(int(year) - 1) in line and Helper.date_match(str(int(year) - 1)).match(line)) \
+                        or line == 'Οι Υπουργοί':
+                    search_active = True
+
+            if persons:
+                signature_sets.append(persons)
+
+            # When we find enough signature sets we stop parsing pages.
+            if len(signature_sets) == len(regulations):
+                break
+
+        # Merge regulations and signature sets
+        for index, signatures in enumerate(reversed(signature_sets)):
+            regulations[index]['signatures'] = signatures
+
+        return regulations
+
 
     # Parses through the PDF Document's tree to extract all textual content.
     # Bold words are placed in between 3 asterisks, which helps us identify certain keywords and names.
     def text_from_layout_objects(self, objects, text=[]):
         self.in_character_sequence = False
         text_content = []
-        # print(objects)
+
         try:
             for layout_object in objects:
-                # print(layout_object)
-                # if isinstance(layout_object, LTTextBoxHorizontal):
-                #     for child in layout_object:
-                #         print(child)
-                #     print("\n")
-
                 if isinstance(layout_object, LTContainer):
                     self.in_character_sequence = False
                     word = ""
@@ -111,6 +189,7 @@ class CustomPDFParser:
                         word += "***"
 
                     text_content.append(word)
+                    text_content.append("\n")
                 elif isinstance(layout_object, LTChar):
                     if not self.in_character_sequence and "-Bold" in layout_object.fontname:
                         text_content.append("***")
@@ -119,6 +198,9 @@ class CustomPDFParser:
                 elif isinstance(layout_object, LTTextBox) or isinstance(layout_object, LTTextLine):
                     self.in_character_sequence = False
                     text_content.append(layout_object.get_text())
+                elif isinstance(layout_object, LTAnno):
+                    self.in_character_sequence = False
+                    text_content.append("\n")
 
             if text:
                 delimiter = ''
@@ -126,7 +208,8 @@ class CustomPDFParser:
                 delimiter = "\n"
             return delimiter.join(text_content)
 
-        except TypeError:
+        except TypeError as e:
+            print("An error occured while extracting textual content from the pdf:", str(e))
             return ""
 
     # Finds information about the regulations being posted in the document. Identifies the type and the number of each
@@ -136,7 +219,8 @@ class CustomPDFParser:
         regulation_nums = []
         plural_to_singular = {'ΚΑΝΟΝΙΣΜΟΙ': "ΚΑΝΟΝΙΣΜΟΣ",
                               'ΠΡΟΕΔΡΙΚΑ ΔΙΑΤΑΓΜΑΤΑ': "ΠΡΟΕΔΡΙΚΟ ΔΙΑΤΑΓΜΑ",
-                              'ΠΡΑΞΕΙΣ ΥΠΟΥΡΓΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ': 'ΠΡΑΞΗ ΥΠΟΥΡΓΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ'}
+                              'ΠΡΑΞΕΙΣ ΥΠΟΥΡΓΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ': 'ΠΡΑΞΗ ΥΠΟΥΡΓΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ',
+                              'ΑΠΟΦΑΣΕΙΣ': 'ΑΠΟΦΑΣΗ'}
 
         def find_regulations_from_multiple_types(text_items):
             multiple = self.get_types('multiple')
@@ -163,20 +247,20 @@ class CustomPDFParser:
 
         def find_multiple_regulations(text_items):
 
+            looking_for = plural_to_singular[type] if type in plural_to_singular else type
+
             for item in text_items[index:]:
-                if type in plural_to_singular and plural_to_singular[type] in item:
-                    search = re.search(r"\d?\d{1,4}?", item)
+                search = re.search(r"(\d{1,4})(\/\d{4,})?", item)
+                if search and looking_for in Helper.normalize_greek_name(item):
                     num = search.group(0)
                     if num not in regulation_nums:
                         regulations.append({'type': plural_to_singular[type], 'number': num})
                         regulation_nums.append(num)
 
         def find_single_regulation(text_items):
-
             for item in text_items[index:]:
                 if type in item:
-                    print(item)
-                    search = re.search(r"\d?\d{1,4}?", item)
+                    search = re.search(r"(\d{1,4})(\/\d{4,})?", item)
                     num = search.group(0)
                     regulations.append({'type': type.replace(num, "").strip(), 'number': num})
                     break
@@ -208,7 +292,6 @@ class CustomPDFParser:
     def get_document_info(self, page):
 
         text_items = self.text_from_layout_objects(page).split("\n")
-        # print('Text items: ', text_items)
 
         # This list will contain information regarding all regulations inside the parsed document. Regulations may be:
         # -- Laws
@@ -234,7 +317,7 @@ class CustomPDFParser:
         index = -1
 
         # Analyze some of the first items to identify the course of action that should be followed
-        for i, possible_title in enumerate(text_items[4:10]):
+        for i, possible_title in enumerate(text_items[4:]):
             if possible_title.strip() == 'ΠΕΡΙΕΧΟΜΕΝΑ':
                 action = "multiple_regulation_types"
                 index = i
@@ -248,7 +331,7 @@ class CustomPDFParser:
             for item in single:
                 if item in possible_title:
                     action = "single_regulation"
-                    type = possible_title
+                    type = item
                     index = i
                     break
             for item in ignore:
