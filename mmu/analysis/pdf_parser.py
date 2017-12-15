@@ -85,11 +85,11 @@ class CustomPDFParser:
             return
 
         first_page_layout = device.get_result()
-        useful_data = self.get_document_info(first_page_layout)
+        regulations = self.get_document_info(first_page_layout)
+        print(regulations)
 
-        # for page in pages:
-        #     self.get_document_info(page)
-
+    # Parses through the PDF Document's tree to extract all textual content.
+    # Bold words are placed in between 3 asterisks, which helps us identify certain keywords and names.
     def text_from_layout_objects(self, objects, text=[]):
         self.in_character_sequence = False
         text_content = []
@@ -129,6 +129,8 @@ class CustomPDFParser:
         except TypeError:
             return ""
 
+    # Finds information about the regulations being posted in the document. Identifies the type and the number of each
+    # regulation. For example 'type': 'ΠΡΟΕΔΡΙΚΟ ΔΙΑΤΑΓΜΑ', 'number': 8 (= ΠΡΟΕΔΡΙΚΟ ΔΙΑΤΑΓΜΑ ΥΠ' ΑΡΙΘΜ. 8)
     def find_regulations(self, action, type, text_items, index=0):
         regulations = []
         regulation_nums = []
@@ -189,6 +191,8 @@ class CustomPDFParser:
             find_single_regulation(text_items)
             return regulations
 
+    # Returns a list of possible keywords grouped by the course of action they belong to
+    # @todo: Improve code legibility by creating simple regex instead of this.. :p
     def get_types(self, type = 'single'):
         if type == 'single':
             return ['ΠΡΟΕΔΡΙΚΟ ΔΙΑΤΑΓΜΑ ΥΠ’ ΑΡΙΘΜ.', "ΝΟΜΟΣ ΥΠ’ ΑΡΙΘ.", "ΝΟΜΟΣ ΥΠ’ ΑΡΙθ.", "NOMOΣ ΥΠ’ ΑΡΙΘ.",
@@ -224,11 +228,12 @@ class CustomPDFParser:
 
         # Indicates the course of action we need to take for our analysis
         action = ""
-        # The type of law this document contains (Most of the times it's a signle type)
+        # The type of law this document contains
         type = ""
-        # Shows where the way ahead was found
+        # Keeps a useful index to start at, ignoring some useless elements that appear first.
         index = -1
 
+        # Analyze some of the first items to identify the course of action that should be followed
         for i, possible_title in enumerate(text_items[4:10]):
             if possible_title.strip() == 'ΠΕΡΙΕΧΟΜΕΝΑ':
                 action = "multiple_regulation_types"
@@ -252,13 +257,8 @@ class CustomPDFParser:
                     type = possible_title
                     break
 
-        end_pattern = r"\*\*\*\s+\*\*\*"
-
-        # print(action)
-
-        regulations = self.find_regulations(action=action, type=type.replace("***", ""), text_items=text_items, index=index)
-        if regulations:
-            print(regulations)
+        # And finally return all information gathered about the document's regulations
+        return self.find_regulations(action=action, type=type.replace("***", ""), text_items=text_items, index=index)
 
     def convert_pdf_to_txt(self, path):
         start = timer()
