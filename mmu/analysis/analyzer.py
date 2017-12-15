@@ -22,9 +22,6 @@ class Analyzer:
 
         # Compile regular expressions that will be used a lot
         self.__illegal_chars = re.compile(r"\d+")
-        self.__camel_case_patteren = re.compile("([α-ω])([Α-Ω])")
-        self.__final_s_pattern = re.compile("(ς)([Α-Ωα-ωά-ώ])")
-        self.__u_pattern = re.compile("(ύ)(και)")
 
     # Checks whether or not a string indicates that parsing should stop.
     def is_break_point(self, word):
@@ -51,28 +48,6 @@ class Analyzer:
                 start = index + 1
 
         return matches
-
-    # Formats roles extracted from pdfs. Specifically, splits separate words that are stuck together
-    def format_role(self, text):
-        parts = text.split(" ")
-
-        final_word = ""
-        for part in parts:
-            split = self.__camel_case_patteren.sub(r'\1 \2', part).split()
-
-            # If no TitleCase or camelCase was found then we address the possibility of a final s inside a word
-            if len(split) == 1:
-                split = self.__final_s_pattern.sub(r'\1 \2', part).split()
-
-            # If no TitleCase or camelCase was found then we address the possibility of a final s inside a word
-            if len(split) == 1:
-                split = self.__u_pattern.sub(r'\1 \2', part).split()
-
-            for word in split:
-                final_word += word + " "
-
-        # Returns the word without trailing spaces
-        return final_word.strip()
 
     # Returns a list of valid start keys for a certain year's format
     def get_start_keys(self, year):
@@ -134,7 +109,7 @@ class Analyzer:
                     if not role:
                         temp_name = word.strip()
                     else:
-                        persons.append({"role" : self.format_role(role), "name" : word.strip()})
+                        persons.append({"role" : Helper.format_role(role), "name" : word.strip()})
 
                     # Reset role for the next one
                     role = ""
@@ -156,7 +131,7 @@ class Analyzer:
                     role += word
 
             if temp_name and role:
-                persons.append({"role": self.format_role(role), "name": temp_name})
+                persons.append({"role": Helper.format_role(role), "name": temp_name})
 
         return persons
 
@@ -184,7 +159,9 @@ class Analyzer:
 
     def start_signature_extraction(self):
         # Loads all issues not yet analyzed
-        issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': ['Α'], 'title': ['ΦΕΚ A 154 - 25.08.2016']})
+        # issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': ['Α']})
+        issues = self.__issue_handler.load_all({'analyzed': [0], 'type': ['Α'], 'date': ['2017-01-01 00:00:00', '>'],
+                                                'title': ['ΦΕΚ A 13 - 09.02.2017']})
 
         if not issues or issues[0] == None:
             return
@@ -195,18 +172,26 @@ class Analyzer:
             issue_number = issue['number']
             issue_title = issue['title']
             issue_date = issue['date']
+            year = issue_date[0:4]
 
             if issue_file == 'N/A':
                 continue
 
-            pdf_signatures = self.__pdf_analyzer.get_signatures_from_pdf(issue_file)
+            # print('Analyzing', issue_title)
+            # All signatures found in this issue grouped by the regulation they belong to.
+            signatures = self.__pdf_analyzer.get_signatures_from_pdf(issue_file, year)
+            try:
+                if not signatures or 'signatures' not in signatures[0]:
+                    print(issue_title, 'does not give anything of value.')
+            except Exception as e:
+                print(str(e))
+
             continue
             pdf_text = self.__pdf_analyzer.get_pdf_text(issue_file)
             pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
 
             if pdf_text:
                 # print("Extracting signatures from issue {}".format(issue_title))
-                year = issue_date[0:4]
                 start = timer()
                 text_signatures = self.extract_signatures_from_text(pdf_text, year)
                 end = timer()

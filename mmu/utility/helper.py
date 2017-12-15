@@ -13,6 +13,9 @@ class Helper:
 
     # Initialize empty dict for saving compiled regex objects
     date_patterns = {}
+    camel_case_patteren = re.compile("([α-ω])([Α-Ω])")
+    final_s_pattern = re.compile("(ς)([Α-Ωα-ωά-ώ])")
+    u_pattern = re.compile("(ύ)(και)")
 
     # Turns a greek name to all caps and without accents
     # @todo: Use regex or other way to speed up
@@ -148,3 +151,26 @@ class Helper:
             Helper.date_patterns[year] = re.compile(date_pattern)
 
         return Helper.date_patterns[year]
+
+    # Formats roles extracted from pdfs. Specifically, splits separate words that are stuck together
+    @staticmethod
+    def format_role(text):
+        parts = text.split(" ")
+
+        final_word = ""
+        for part in parts:
+            split = Helper.camel_case_patteren.sub(r'\1 \2', part).split()
+
+            # If no TitleCase or camelCase was found then we address the possibility of a final s inside a word
+            if len(split) == 1:
+                split = Helper.final_s_pattern.sub(r'\1 \2', part).split()
+
+            # If no TitleCase or camelCase was found then we address the possibility of a final s inside a word
+            if len(split) == 1:
+                split = Helper.u_pattern.sub(r'\1 \2', part).split()
+
+            for word in split:
+                final_word += word + " "
+
+        # Returns the word without trailing spaces
+        return Helper.normalize_greek_name(final_word.strip())
