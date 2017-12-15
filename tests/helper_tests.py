@@ -29,6 +29,9 @@ class HelperTest(unittest.TestCase):
     def test_date_match(self):
         test = "Αθήνα, 18 Ιανουαρίου 2017"
         self.assertTrue(Helper.date_match(2017).match(test) is not None)
+        test2 = "2015"
+        self.assertFalse(Helper.date_match(2015).match(test) is not None)
+
 
 if __name__ == '__main__':
     unittest.main()
