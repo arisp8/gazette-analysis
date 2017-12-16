@@ -159,9 +159,7 @@ class Analyzer:
 
     def start_signature_extraction(self):
         # Loads all issues not yet analyzed
-        # issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': ['Α']})
-        issues = self.__issue_handler.load_all({'analyzed': [0], 'type': ['Α'], 'date': ['2017-01-01 00:00:00', '>'],
-                                                'title': ['ΦΕΚ A 13 - 09.02.2017']})
+        issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': ['Α'], 'title': ['ΦΕΚ A 72 - 19.05.2017']})
 
         if not issues or issues[0] == None:
             return
@@ -177,55 +175,30 @@ class Analyzer:
             if issue_file == 'N/A':
                 continue
 
-            # print('Analyzing', issue_title)
+            print('Analyzing', issue_title)
             # All signatures found in this issue grouped by the regulation they belong to.
-            signatures = self.__pdf_analyzer.get_signatures_from_pdf(issue_file, year)
-            try:
-                if not signatures or 'signatures' not in signatures[0]:
-                    print(issue_title, 'does not give anything of value.')
-            except Exception as e:
-                print(str(e))
+            regulations = self.__pdf_analyzer.get_signatures_from_pdf(issue_file, year)
 
-            continue
-            pdf_text = self.__pdf_analyzer.get_pdf_text(issue_file)
-            pdf_images = self.__pdf_analyzer.get_pdf_images(issue_file, issue_id)
+            if not regulations:
+                print("No relevant regulations were found in", issue_title)
+                continue
 
-            if pdf_text:
-                # print("Extracting signatures from issue {}".format(issue_title))
-                start = timer()
-                text_signatures = self.extract_signatures_from_text(pdf_text, year)
-                end = timer()
-                print("{} seconds elapsed for extracting signatures from the text.".format(end - start))
-                if text_signatures:
-                    print("{} signatures found.".format(len(text_signatures)))
-                    print(issue_title, text_signatures)
-                    raw_signatures = []
-                    start = timer()
-                    for signature in text_signatures:
-                        name = signature['name']
-                        role = signature['role']
-                        person = self.load_person_by_name(name)
-                        db_signature = self.load_signature_from_issue(issue_id, name)
+            if 'signatures' not in regulations[0]:
+                print("Signature extraction failed for", issue_title)
+                continue
 
-                        if not db_signature:
-
-                            data = json.dumps(signature)
-                            person_id = person['id']
-                            self.__signature_handler.create(person_id, issue_id, data)
-
-                        person_name = person['name']
-
-
-                        raw_signatures.append({'person_name': Helper.normalize_greek_name(person_name),
-                                               'role': Helper.normalize_greek_name(role),
+            raw_signatures = []
+            for regulation in regulations:
+                regulation_type = regulation['type'] + " " + regulation['number']
+                if 'signatures' in regulation:
+                    for signature in regulation['signatures']:
+                        raw_signatures.append({'person_name': signature['name'],
+                                               'role': Helper.format_role(signature['role']),
                                                'issue_title': issue_title,
-                                               'issue_date': issue_date})
+                                               'issue_date': issue_date,
+                                               'regulation': regulation_type})
 
-                    self.__raw_signature_handler.create_multiple(raw_signatures)
-                    end = timer()
-                    print("{} to save all the stuff.".format(end - start))
-                else:
-                    print(issue_title, " has no relevant signatures.")
+            self.__raw_signature_handler.create_multiple(raw_signatures)
             self.__issue_handler.set_analyzed(issue_id)
 
     def prepare_analysis(self, conditions=None):
