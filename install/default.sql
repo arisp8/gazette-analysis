@@ -13,6 +13,7 @@ CREATE TABLE IF NOT EXISTS `raw_signatures` (
 	`role`  TEXT, -- The role of the minister signing
 	`issue_title`	TEXT, -- The name of the issues this signature was extracted from
 	`issue_date` INTEGER NOT NULL, -- UNIX timestamp when the issue this signature was found on was published
+	`regulation`    TEXT,
 	PRIMARY KEY(`id`)
 );
 CREATE TABLE IF NOT EXISTS `positions` (
