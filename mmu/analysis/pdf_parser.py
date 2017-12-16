@@ -100,6 +100,10 @@ class CustomPDFParser:
         interpreter.process_page(first_page)
         first_page_layout = device.get_result()
         regulations = self.get_document_info(first_page_layout)
+
+        if not regulations:
+            return
+
         signature_sets = []
 
 
@@ -220,7 +224,9 @@ class CustomPDFParser:
         plural_to_singular = {'ΚΑΝΟΝΙΣΜΟΙ': "ΚΑΝΟΝΙΣΜΟΣ",
                               'ΠΡΟΕΔΡΙΚΑ ΔΙΑΤΑΓΜΑΤΑ': "ΠΡΟΕΔΡΙΚΟ ΔΙΑΤΑΓΜΑ",
                               'ΠΡΑΞΕΙΣ ΥΠΟΥΡΓΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ': 'ΠΡΑΞΗ ΥΠΟΥΡΓΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ',
-                              'ΑΠΟΦΑΣΕΙΣ': 'ΑΠΟΦΑΣΗ'}
+                              'ΑΠΟΦΑΣΕΙΣ': 'ΑΡΙΘΜ Φ',
+                              'ΑΠΟΦΑΣΕΙΣ ΤΗΣ ΟΛΟΜΕΛΕΙΑΣ ΤΗΣ ΒΟΥΛΗΣ': 'ΑΠΟΦΑΣΗ',
+                              'AΠΟΦΑΣΕΙΣ': 'ΑΡΙΘΜ Φ'}
 
         def find_regulations_from_multiple_types(text_items):
             multiple = self.get_types('multiple')
@@ -228,7 +234,6 @@ class CustomPDFParser:
             for item in text_items[index:]:
 
                 if len(regulations) > 1 and re.match(r"\*\*\*\s+\*\*\*", item):
-                    print("Stopping")
                     break
 
                 if '***' in item:
@@ -245,13 +250,17 @@ class CustomPDFParser:
                             regulations.append({'type': plural_to_singular[type], 'number': num})
                             regulation_nums.append(num)
 
+        synonyms = {'ΑΡΙΘΜ Φ': 'ΑΡΙΘ ΠΡΩΤ'}
+
         def find_multiple_regulations(text_items):
 
             looking_for = plural_to_singular[type] if type in plural_to_singular else type
-
             for item in text_items[index:]:
-                search = re.search(r"(\d{1,4})(\/\d{4,})?", item)
-                if search and looking_for in Helper.normalize_greek_name(item):
+                search = re.search(r"(\d{1,4})(/[\s\w\d.]+){,4}", item)
+                if search and (looking_for in Helper.normalize_greek_name(item)
+                                or looking_for in synonyms
+                                and synonyms[looking_for] in Helper.normalize_greek_name(item)):
+
                     num = search.group(0)
                     if num not in regulation_nums:
                         regulations.append({'type': plural_to_singular[type], 'number': num})
