@@ -32,23 +32,6 @@ class Analyzer:
         else:
             return False
 
-    # Finds all occurences of a substring in a string
-    # @return The indexes of all matched substrings.
-    def find_all(self, key, string):
-        matches = []
-        start = 0
-        searching = True
-        while searching:
-            index = string.find(key, start)
-
-            if index == -1:
-                searching = False
-            else:
-                matches.append(index)
-                start = index + 1
-
-        return matches
-
     # Returns a list of valid start keys for a certain year's format
     def get_start_keys(self, year):
         if year == "2017":
@@ -64,13 +47,13 @@ class Analyzer:
         starting_indexes = []
 
         for key in start_keys:
-            starting_indexes += self.find_all(key, text)
+            starting_indexes += Helper.find_all(key, text)
 
         if not starting_indexes:
             starting_indexes = [m.start() for m in Helper.date_match(year).finditer(text)]
 
         # Ending indexes are useful when available, but availability is not guaranteed
-        ending_indexes = self.find_all(end_key, text)
+        ending_indexes = Helper.find_all(end_key, text)
 
         # @todo: Find ministry council's members from pdf text (Τα Μέλη - Μέλη Υπουργικού Συμβουλίου)
         persons = []
@@ -159,7 +142,8 @@ class Analyzer:
 
     def start_signature_extraction(self):
         # Loads all issues not yet analyzed
-        issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': ['Α'], 'title': ['ΦΕΚ A 72 - 19.05.2017']})
+        issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': ['Α']})
+        # issues = self.__issue_handler.load_all({'analyzed' : [0], 'type': ['Α'], 'title': ['ΦΕΚ A 179 - 23.11.2017']})
 
         if not issues or issues[0] == None:
             return

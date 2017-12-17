@@ -174,3 +174,32 @@ class Helper:
 
         # Returns the word without trailing spaces
         return Helper.normalize_greek_name(final_word.strip())
+
+    # Finds all occurences of a substring in a string
+    # @return The indexes of all matched substrings.
+    @staticmethod
+    def find_all(key, string):
+        matches = []
+        start = 0
+        searching = True
+        while searching:
+            index = string.find(key, start)
+
+            if index == -1:
+                searching = False
+            else:
+                matches.append(index)
+                start = index + 1
+
+        return matches
+
+    # Orders a list of dicts by a value inside the dicts
+    @staticmethod
+    def qsort_by_dict_value(inlist, dict_key):
+        if inlist == []:
+            return []
+        else:
+            pivot = inlist[0]
+            lesser = Helper.qsort_by_dict_value([x for x in inlist[1:] if x[dict_key] < pivot[dict_key]], dict_key)
+            greater = Helper.qsort_by_dict_value([x for x in inlist[1:] if x[dict_key] >= pivot[dict_key]], dict_key)
+            return lesser + [pivot] + greater
