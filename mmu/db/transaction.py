@@ -235,6 +235,11 @@ class TransactionHandler:
         cursor.execute(query)
         return cursor.fetchmany(limit)
 
+    def execute_select_all(self, query):
+        cursor = self.__db.cursor()
+        cursor.execute(query)
+        return cursor.fetchall()
+
     # Selects all elements that match a query
     def select_all(self, table, columns=None, conditions=None, joins=None, group_by=None):
         cursor = self.__db.cursor()
