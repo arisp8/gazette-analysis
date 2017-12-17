@@ -2,6 +2,7 @@ import os
 import re
 import io
 import time
+import operator
 
 from subprocess import call
 from PIL import Image
@@ -28,7 +29,8 @@ class CustomPDFParser:
     def __init__(self):
         self.__project_path = os.getcwd()
         self.__illegal_chars = re.compile(r"\d+")
-        # selfrequired objects
+
+        # char_margin=4, word_margin=0.25, all_texts=True
         self.laparams = LAParams()
 
     def get_pdf_text(self, file_name):
@@ -128,14 +130,21 @@ class CustomPDFParser:
                 line = line.strip()
                 if search_active:
                     if self.is_break_point(line):
+                        # Continue searching at next point
+                        role = ""
+                        temp_name = ""
+                        search_active = False
                         if persons:
-                            break
-                        else:
-                            # Continue searching at next point, false alarm
-                            role = ""
-                            search_active = False
+                            signature_sets.append(persons)
+                            persons = []
 
-                    if line == 'Οι Υπουργοί':
+                            # Break if enough signature sets have been found. Otherwise we'll continue looking for
+                            # more in the same page.
+                            if len(signature_sets) == len(regulations):
+                                break
+
+
+                    if line == 'Οι Υπουργοί' or line == 'Τα Μέλη':
                         continue
 
 
@@ -162,6 +171,7 @@ class CustomPDFParser:
                         or line == 'Οι Υπουργοί':
                     search_active = True
 
+            # If the end of page has been reached we save the signatures
             if persons:
                 signature_sets.append(persons)
 
@@ -171,6 +181,8 @@ class CustomPDFParser:
 
         # Merge regulations and signature sets
         for index, signatures in enumerate(reversed(signature_sets)):
+            if index >= len(regulations):
+                return
             regulations[index]['signatures'] = signatures
 
         return regulations
@@ -195,7 +207,7 @@ class CustomPDFParser:
                     text_content.append(word)
                     text_content.append("\n")
                 elif isinstance(layout_object, LTChar):
-                    if not self.in_character_sequence and "-Bold" in layout_object.fontname:
+                    if not self.in_character_sequence and ("-Bold" in layout_object.fontname or "-Semibold" in layout_object.fontname):
                         text_content.append("***")
                     text_content.append(layout_object.get_text())
                     self.in_character_sequence = True
@@ -224,33 +236,45 @@ class CustomPDFParser:
         plural_to_singular = {'ΚΑΝΟΝΙΣΜΟΙ': "ΚΑΝΟΝΙΣΜΟΣ",
                               'ΠΡΟΕΔΡΙΚΑ ΔΙΑΤΑΓΜΑΤΑ': "ΠΡΟΕΔΡΙΚΟ ΔΙΑΤΑΓΜΑ",
                               'ΠΡΑΞΕΙΣ ΥΠΟΥΡΓΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ': 'ΠΡΑΞΗ ΥΠΟΥΡΓΙΚΟΥ ΣΥΜΒΟΥΛΙΟΥ',
-                              'ΑΠΟΦΑΣΕΙΣ': 'ΑΡΙΘΜ Φ',
+                              'ΑΠΟΦΑΣΕΙΣ': 'ΑΡΙΘΜ',
                               'ΑΠΟΦΑΣΕΙΣ ΤΗΣ ΟΛΟΜΕΛΕΙΑΣ ΤΗΣ ΒΟΥΛΗΣ': 'ΑΠΟΦΑΣΗ',
-                              'AΠΟΦΑΣΕΙΣ': 'ΑΡΙΘΜ Φ'}
+                              'AΠΟΦΑΣΕΙΣ': 'ΑΡΙΘΜ'}
 
         def find_regulations_from_multiple_types(text_items):
             multiple = self.get_types('multiple')
+            looking_for = ""
+            text_items = '\n'.join((text_items))
 
-            for item in text_items[index:]:
+            start_keys = []
 
-                if len(regulations) > 1 and re.match(r"\*\*\*\s+\*\*\*", item):
+            for item in multiple:
+                matches = Helper.find_all(item, text_items)
+                for match in matches:
+                    start_keys.append({'type': item, 'index': int(match)})
+
+            sorted_keys = Helper.qsort_by_dict_value(start_keys, 'index')
+            for index, key in enumerate(sorted_keys):
+                current_type = key['type']
+                start = key['index']
+                if index + 1 < len(sorted_keys):
+                    end = sorted_keys[index + 1]['index']
+                else:
                     break
+                    # end = len(text_items)
 
-                if '***' in item:
-                    item = item.replace("***", "").strip()
-                    if item in multiple:
-                        type = item
 
-                if '...' in item:
-                    all_matches = re.findall(r"(\d{1,}\.)([\s\w]+)()", item)
-                    for match in all_matches:
-                        num = match[0]
-                        # Make sure it's not already added
-                        if num not in regulation_nums:
-                            regulations.append({'type': plural_to_singular[type], 'number': num})
-                            regulation_nums.append(num)
+                substring = text_items[start:end]
+                matches = re.findall(r"(\d{1,4})(/[\s\w\d.]+){,4}.?\s+[Α-Ω]", substring)
+                for match in matches:
+                    num = match[0]
+                    regulation_type = plural_to_singular[current_type] if current_type in plural_to_singular \
+                        else current_type
 
-        synonyms = {'ΑΡΙΘΜ Φ': 'ΑΡΙΘ ΠΡΩΤ'}
+                    regulations.append({'type': regulation_type, 'number': num})
+
+
+
+        synonyms = {'ΑΡΙΘΜ': 'ΑΡΙΘ'}
 
         def find_multiple_regulations(text_items):
 
@@ -327,7 +351,7 @@ class CustomPDFParser:
 
         # Analyze some of the first items to identify the course of action that should be followed
         for i, possible_title in enumerate(text_items[4:]):
-            if possible_title.strip() == 'ΠΕΡΙΕΧΟΜΕΝΑ':
+            if 'ΠΕΡΙΕΧΟΜΕΝΑ' in possible_title.strip():
                 action = "multiple_regulation_types"
                 index = i
                 break
