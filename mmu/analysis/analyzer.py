@@ -2,7 +2,7 @@ from mmu.db.handlers.issue import IssueHandler
 from mmu.db.handlers.signatures import SignatureHandler
 from mmu.db.handlers.signatures import RawSignatureHandler
 from mmu.db.handlers.person import PersonHandler
-from mmu.automations.researcher import Researcher
+# from mmu.automations.researcher import Researcher
 from mmu.analysis.pdf_parser import CustomPDFParser
 from mmu.utility.helper import Helper
 from mmu.analysis.stats import Stats
@@ -17,7 +17,7 @@ class Analyzer:
         self.__pdf_analyzer = CustomPDFParser()
         self.__signature_handler = SignatureHandler()
         self.__person_handler = PersonHandler()
-        self.__researcher = Researcher()
+        # self.__researcher = Researcher()
         self.__raw_signature_handler = RawSignatureHandler()
 
         # Compile regular expressions that will be used a lot
@@ -222,19 +222,19 @@ class Analyzer:
                 update_conditions['person_name'] = [name]
                 self.__raw_signature_handler.update(params={'role': correct_role}, conditions=conditions)
 
+    def find_ministry_name_from_role(self, role):
+        return role.replace("Ο ΥΠΟΥΡΓΟΣ", "").replace("Ο ΑΝΑΠΛΗΡΩΤΗΣ ΥΠΟΥΡΓΟΣ", "") \
+                    .replace("Ο ΥΦΥΠΟΥΡΓΟΣ", "").replace("ΥΦΥΠΟΥΡΓΟΣ", "").replace("ΑΝΑΠΛΗΡΩΤΗΣ ΥΠΟΥΡΓΟΣ", "") \
+                    .replace("ΥΠΟΥΡΓΟΣ", "").replace("ΟΙ ΥΠΟΥΡΓΟΙ", "")\
+                    .replace("ΟΙΚΟΝΟΜΙΚΩΝΟΙΚΟΝΟΜΙΚΩΝ", "ΟΙΚΟΝΟΜΙΚΩΝ").replace("ΟΙ ΑΝΑΠΛΗΡΩΤΕΣ ΥΠΟΥΡΓΟΙ", "").strip()
 
     def start_analysis(self, conditions = None):
-        # Prepare and sanitize data
-        self.prepare_analysis(conditions)
+        signatures = self.__raw_signature_handler.load_all(conditions=conditions)
+        for signature in signatures:
+            role = self.__raw_signature_handler.find_most_common_role(conditions=conditions,
+                                                                      person_name=signature['person_name'])
 
-        # Load all the issues we want to analyze
-        all_issues = self.__issue_handler.load_all(conditions=conditions)
+            signature['ministry'] = self.find_ministry_name_from_role(role[0]['role'])
 
-        # Group signatures by issue title
-        grouped_signatures = {}
-        for issue in all_issues:
-            issue_conditions = {'issue_title' : [issue['title']]}
-            grouped_signatures[issue['title']] = self.__raw_signature_handler.load_all(issue_conditions)
-
-
-        co_responsibilities = Stats.measure_co_responsibilities(grouped_signatures)
+        Stats.measure_co_responsibilities(signatures)
+        # Stats.cluster_signature_data(signatures)
