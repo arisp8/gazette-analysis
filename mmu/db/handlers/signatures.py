@@ -72,3 +72,19 @@ class RawSignatureHandler(TransactionHandler):
     # Updates database entries that match given conditions changing their values to given params
     def update(self, params, conditions=None):
         TransactionHandler.update(self, 'raw_signatures', params, conditions)
+
+    # Finds the most common role given a person's name and some conditions
+    def find_most_common_role(self, conditions, person_name):
+        conditions['person_name'] = [person_name]
+        formatted_conditions = TransactionHandler.format_conditions(self, 'raw_signatures', conditions)
+        query = ''' 
+                    SELECT role,
+                    COUNT(role) AS role_occurence 
+                    FROM   raw_signatures
+                    {conditions}
+                    GROUP BY `role`
+                    ORDER BY `role_occurence` DESC
+                    LIMIT    1;
+                '''.format(conditions=formatted_conditions)
+
+        return TransactionHandler.execute_select_all(self, query=query)
