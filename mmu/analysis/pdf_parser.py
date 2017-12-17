@@ -287,7 +287,7 @@ class CustomPDFParser:
 
                     num = search.group(0)
                     if num not in regulation_nums:
-                        regulations.append({'type': plural_to_singular[type], 'number': num})
+                        regulations.append({'type': plural_to_singular[type.strip()], 'number': num})
                         regulation_nums.append(num)
 
         def find_single_regulation(text_items):
