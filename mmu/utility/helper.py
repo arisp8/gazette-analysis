@@ -15,25 +15,32 @@ class Helper:
     date_patterns = {}
     camel_case_patteren = re.compile("([α-ω])([Α-Ω])")
     final_s_pattern = re.compile("(ς)([Α-Ωα-ωά-ώ])")
+    upper_s_pattern = re.compile("(Σ)(ΚΑΙ)")
     u_pattern = re.compile("(ύ)(και)")
 
-    # Turns a greek name to all caps and without accents
+    # Converts upper / lowercase text with possible ambiguous latin characters to a fully greek uppercase word with
+    # no accents.
     # @todo: Use regex or other way to speed up
     @staticmethod
     def normalize_greek_name(name):
         name = name.replace(",", " ")
         # α, β, γ, δ, ε, ζ, η, θ, ι, κ, λ, μ, ν, ξ, ο, π, ρ, σ, τ, υ, φ, χ, ψ, ω
         name = name.replace("ΐ", "ϊ").upper()
-        replace_accents = {'Ά': 'Α', 'Έ': 'Ε', 'Ή': 'Η', 'Ί': 'Ι', 'Ϊ': 'Ι', 'Ό': 'Ο', 'Ύ': 'Υ', 'Ϋ': 'Υ', 'Ώ': 'Ω'}
 
-        for accent in replace_accents:
-            if accent in name:
-                name =  name.replace(accent, replace_accents[accent])
+        # Α Β Γ Δ Ε Ζ Η Θ Ι Κ Λ Μ Ν Ξ Ο Π Ρ Σ Τ Υ Φ Χ Ψ Ω
+        # A B C D E F G H I J K L M N O P Q R S T U V W X Y Z
+
+        replace_chars = {'Ά': 'Α', 'Έ': 'Ε', 'Ή': 'Η', 'Ί': 'Ι', 'Ϊ': 'Ι', 'Ό': 'Ο', 'Ύ': 'Υ', 'Ϋ': 'Υ', 'Ώ': 'Ω',
+                         'A': 'Α', 'B': 'Β', 'E': 'Ε', 'H': 'Η', 'I': 'Ι', 'K': 'Κ', 'M': 'Μ', 'N': 'Ν', 'O': 'Ο',
+                         'T': 'Τ', 'X': 'Χ', 'Y': 'Υ', 'Z': 'Ζ'}
+
+        for char in replace_chars:
+            name = name.replace(char, replace_chars[char])
 
         # Remove characters that should not belong in the name
         name = re.sub("[^Α-ΩΪΫ\s]+", "", name)
 
-        return name
+        return ' '.join(name.split())
 
     @staticmethod
     # Performs an http request and returns the response
@@ -168,6 +175,10 @@ class Helper:
             # If no TitleCase or camelCase was found then we address the possibility of a final s inside a word
             if len(split) == 1:
                 split = Helper.u_pattern.sub(r'\1 \2', part).split()
+
+            # If no TitleCase or camelCase was found then we address the possibility of a final s inside a word
+            if len(split) == 1:
+                split = Helper.upper_s_pattern.sub(r'\1 \2', part).split()
 
             for word in split:
                 final_word += word + " "
