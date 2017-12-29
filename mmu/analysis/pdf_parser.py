@@ -31,7 +31,7 @@ class CustomPDFParser:
         self.__illegal_chars = re.compile(r"\d+")
 
         # char_margin=4, word_margin=0.25, all_texts=True
-        self.laparams = LAParams()
+        self.laparams = LAParams(line_overlap=0, char_margin=0.01)
 
     def get_pdf_text(self, file_name):
         try:
@@ -77,7 +77,7 @@ class CustomPDFParser:
             return False
 
     # Analyzes the structure of the pdf file to correctly extract the signatures from the document.
-    def get_signatures_from_pdf(self, path, year=None):
+    def get_signatures_from_pdf(self, path, year=''):
         codec = 'utf-8'
         rsrcmgr = PDFResourceManager()
         laparams = LAParams()
@@ -102,6 +102,8 @@ class CustomPDFParser:
         interpreter.process_page(first_page)
         first_page_layout = device.get_result()
         regulations = self.get_document_info(first_page_layout)
+
+        ignore_words = ['ΟI ΥΠΟΥΡΓΟI', 'ΤΑ ΜΕΛΗ', 'ΟΙ ΥΠΟΥΡΓΟΙ']
 
         if not regulations:
             return
@@ -143,10 +145,9 @@ class CustomPDFParser:
                             if len(signature_sets) == len(regulations):
                                 break
 
-
-                    if line == 'Οι Υπουργοί' or line == 'Τα Μέλη':
+                    normal = Helper.normalize_greek_name(line)
+                    if  normal in ignore_words:
                         continue
-
 
                     if temp_name:
                         role = line.replace("***", "")
