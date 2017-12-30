@@ -16,6 +16,7 @@ class PdfParserTest(unittest.TestCase):
         self.assertEqual(regulation['number'], '1')
         self.assertEqual(regulation['type'], 'ΠΡΟΕΔΡΙΚΟ ΔΙΑΤΑΓΜΑ ΥΠ’ ΑΡΙΘΜ.')
 
+    def test_one_regulation_per_document_2(self):
         correct_signatures = [{"role": "Ο ΠΡΟΕΔΡΟΣ ΤΗΣ ΔΗΜΟΚΡΑΤΙΑΣ", "name": "ΠΡΟΚΟΠΙΟΣ Β ΠΑΥΛΟΠΟΥΛΟΣ"},
                               {"role": "ΑΝΑΠΛΗΡΩΤΗΣ ΥΠΟΥΡΓΟΣ ΕΣΩΤΕΡΙΚΩΝ ΚΑΙ ΔΙΟΙΚΗΤΙΚΗΣ ΑΝΑΣΥΓΚΡΟΤΗΣΗΣ",
                                "name": "ΝΙΚΟΛΑΟΣ ΤΟΣΚΑΣ"},
@@ -32,8 +33,6 @@ class PdfParserTest(unittest.TestCase):
 
         file_path = os.path.join(os.path.join(os.getcwd(), 'test_pdfs/'), 'ΦΕΚ A 12 - 01.02.2016.pdf')
         regulation = self.parser.get_signatures_from_pdf(file_path, str(2016))[0]
-
-        print(regulation)
 
         self.assertEqual(correct_signatures, regulation['signatures'])
         self.assertEqual(regulation['number'], '4363')
