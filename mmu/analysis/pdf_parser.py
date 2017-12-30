@@ -14,6 +14,7 @@ from pdfminer.layout import LAParams
 from pdfminer.layout import LTContainer
 from pdfminer.layout import LTTextBox
 from pdfminer.layout import LTTextLine
+from pdfminer.layout import LTTextLineHorizontal
 from pdfminer.layout import LTAnno
 from pdfminer.layout import LTImage
 from pdfminer.layout import LTFigure
@@ -121,6 +122,8 @@ class CustomPDFParser:
             # Split text to line's for easier parsing
             text_lines = self.text_from_layout_objects(page_layout).split("\n")
 
+            print(text_lines)
+
             # Boolean indicating whether we are currently in a signature set
             # Save the data found
             search_active = False
@@ -186,44 +189,41 @@ class CustomPDFParser:
                 return
             regulations[index]['signatures'] = signatures
 
+        print(regulations)
+
         return regulations
 
 
     # Parses through the PDF Document's tree to extract all textual content.
     # Bold words are placed in between 3 asterisks, which helps us identify certain keywords and names.
-    def text_from_layout_objects(self, objects, text=[]):
+    def text_from_layout_objects(self, objects, text=""):
         self.in_character_sequence = False
-        text_content = []
 
         try:
             for layout_object in objects:
-                if isinstance(layout_object, LTContainer):
+                if isinstance(layout_object, LTTextBoxHorizontal):
                     self.in_character_sequence = False
-                    word = ""
-                    for child in layout_object:
-                        word += self.text_from_layout_objects(child, text_content)
-                    if '***' in word:
-                        word += "***"
+                    # text += layout_object.get_text()
 
-                    text_content.append(word)
-                    text_content.append("\n")
+                    for child in layout_object:
+                        text = self.text_from_layout_objects(child, text)
+                # elif isinstance(layout_object, LTTextLine):
+                #     for child in layout_object:
+                #         text = self.text_from_layout_objects(layout_object, text)
                 elif isinstance(layout_object, LTChar):
                     if not self.in_character_sequence and ("-Bold" in layout_object.fontname or "-Semibold" in layout_object.fontname):
-                        text_content.append("***")
-                    text_content.append(layout_object.get_text())
+                        text += "***"
+                    text += layout_object.get_text()
                     self.in_character_sequence = True
-                elif isinstance(layout_object, LTTextBox) or isinstance(layout_object, LTTextLine):
-                    self.in_character_sequence = False
-                    text_content.append(layout_object.get_text())
                 elif isinstance(layout_object, LTAnno):
                     self.in_character_sequence = False
-                    text_content.append("\n")
+                    text += "\n"
+                elif isinstance(layout_object, LTContainer):
+                    self.in_character_sequence = False
+                    for child in layout_object:
+                        text = self.text_from_layout_objects(child, text)
 
-            if text:
-                delimiter = ''
-            else:
-                delimiter = "\n"
-            return delimiter.join(text_content)
+            return text
 
         except TypeError as e:
             print("An error occured while extracting textual content from the pdf:", str(e))
