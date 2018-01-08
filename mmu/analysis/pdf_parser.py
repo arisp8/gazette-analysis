@@ -122,8 +122,6 @@ class CustomPDFParser:
             # Split text to line's for easier parsing
             text_lines = self.text_from_layout_objects(page_layout).split("\n")
 
-            print(text_lines)
-
             # Boolean indicating whether we are currently in a signature set
             # Save the data found
             search_active = False
@@ -188,8 +186,6 @@ class CustomPDFParser:
             if index >= len(regulations):
                 return
             regulations[index]['signatures'] = signatures
-
-        print(regulations)
 
         return regulations
 
