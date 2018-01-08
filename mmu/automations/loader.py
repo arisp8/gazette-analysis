@@ -15,9 +15,6 @@ from http.client import RemoteDisconnected
 from mmu.db.handlers.issue import IssueHandler
 from mmu.utility.helper import Helper
 
-# @todo: Catch a few common exceptions that may appear at some points
-# selenium.common.exceptions.NoSuchWindowException - When chrome's driver is closed
-
 class Loader:
 
     __source = ""
