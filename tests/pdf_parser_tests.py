@@ -1,5 +1,7 @@
 import unittest
 import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 from mmu.analysis.pdf_parser import CustomPDFParser
 
 class PdfParserTest(unittest.TestCase):
@@ -9,7 +11,7 @@ class PdfParserTest(unittest.TestCase):
     def test_one_regulation_per_document(self):
         correct_signatures = [{"role": "Ο ΠΡΟΕΔΡΟΣ ΤΗΣ ΔΗΜΟΚΡΑΤΙΑΣ", "name": "ΠΡΟΚΟΠΗΣ Β ΠΑΥΛΟΠΟΥΛΟΣ"},
                       {"role": "Ο ΥΠΟΥΡΓΟΣ ΝΑΥΤΙΛΙΑΣ ΚΑΙ ΝΗΣΙΩΤΙΚΗΣ ΠΟΛΙΤΙΚΗΣ", "name": "ΘΕΟΔΩΡΟΣ ΔΡΙΤΣΑΣ"}]
-        file_path = os.path.join(os.path.join(os.getcwd(), 'test_pdfs/'), 'ΦΕΚ A 1 - 12.01.2016.pdf')
+        file_path = self.get_file_path('ΦΕΚ A 1 - 12.01.2016.pdf');
         regulation = self.parser.get_signatures_from_pdf(file_path, str(2016))[0]
 
         self.assertEqual(correct_signatures, regulation['signatures'])
@@ -24,7 +26,7 @@ class PdfParserTest(unittest.TestCase):
 
 
 
-        file_path = os.path.join(os.path.join(os.getcwd(), 'test_pdfs'), 'ΦΕΚ A 12 - 01.02.2016.pdf')
+        file_path = self.get_file_path('ΦΕΚ A 12 - 01.02.2016.pdf');
         regulation = self.parser.get_signatures_from_pdf(file_path, str(2016))[0]
         names = self.get_names_from_regulation(regulation)
 
@@ -34,7 +36,7 @@ class PdfParserTest(unittest.TestCase):
 
     def test_one_regulation_per_document_3(self):
         correct_names = ['ΣΤΑΥΡΟΣ ΚΟΝΤΟΝΗΣ', 'ΓΕΩΡΓΙΟΣ ΣΤΑΘΑΚΗΣ']
-        file_path = os.path.join(os.path.join(os.getcwd(), 'test_pdfs'), 'ΦΕΚ A 132 - 06.09.2017.pdf')
+        file_path = self.get_file_path('ΦΕΚ A 132 - 06.09.2017.pdf');
         regulation = self.parser.get_signatures_from_pdf(file_path, str(2016))[0]
 
         names = self.get_names_from_regulation(regulation)
@@ -53,7 +55,7 @@ class PdfParserTest(unittest.TestCase):
                          'ΠΑΥΛΟΣ ΠΟΛΑΚΗΣ', 'ΑΡΙΣΤΕΙΔΗΣ ΜΠΑΛΤΑΣ', 'ΣΤΑΥΡΟΣ ΚΟΝΤΟΝΗΣ', 'ΕΥΚΛΕΙΔΗΣ ΤΣΑΚΑΛΩΤΟΣ',
                          'ΤΡΥΦΩΝΑΣ ΑΛΕΞΙΑΔΗΣ', 'ΓΕΩΡΓΙΟΣ ΧΟΥΛΙΑΡΑΚΗΣ', 'ΠΑΝΑΓΙΩΤΗΣ ΣΚΟΥΡΛΕΤΗΣ', 'ΙΩΑΝΝΗΣ ΤΣΙΡΩΝΗΣ',
                          'ΧΡΗΣΤΟΣ ΣΠΙΡΤΖΗΣ', 'ΘΕΟΔΩΡΟΣ ΔΡΙΤΣΑΣ', 'ΕΥΑΓΓΕΛΟΣ ΑΠΟΣΤΟΛΟΥ', 'ΝΙΚΟΛΑΟΣ ΠΑΠΠΑΣ']
-        file_path = os.path.join(os.path.join(os.getcwd(), 'test_pdfs'), 'ΦΕΚ A 93 - 27.05.2016.pdf')
+        file_path = self.get_file_path('ΦΕΚ A 93 - 27.05.2016.pdf');
         regulation = self.parser.get_signatures_from_pdf(file_path, str(2016))[0]
 
         names = self.get_names_from_regulation(regulation)
@@ -71,6 +73,9 @@ class PdfParserTest(unittest.TestCase):
         for signature in regulation['signatures']:
             names.append(signature['name'])
         return names
+
+    def get_file_path(self, file_name):
+    	return os.path.join(os.path.join(os.path.dirname(__file__), 'test_pdfs'), file_name);
 
 if __name__ == '__main__':
     unittest.main()
