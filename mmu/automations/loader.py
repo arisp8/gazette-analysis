@@ -32,7 +32,7 @@ class Loader:
         chromeOptions.add_experimental_option("prefs", prefs)
 
         # @todo: Replace hard paths with relative paths and make sure that all needed stuff is downloaded in setup
-        self.__driver = webdriver.Chrome(os.path.join(os.getcwd() + "/../", "drivers/chromedriver"),
+        self.__driver = webdriver.Chrome(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "../drivers/chromedriver"),
                                          chrome_options=chromeOptions)
 
         self.__issue_handler = IssueHandler()
