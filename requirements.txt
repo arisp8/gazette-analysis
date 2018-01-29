@@ -1,0 +1,9 @@
+pdfminer.six
+pillow
+sklearn
+numpy
+pandas
+matplotlib
+plotly
+selenium
+bs4
