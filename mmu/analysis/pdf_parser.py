@@ -72,8 +72,6 @@ class CustomPDFParser:
             return False
         elif self.__illegal_chars.search(word):
             return True
-        elif word == 'Θεωρήθηκε και τέθηκε η Μεγάλη Σφραγίδα του Κράτους.':
-            return True
         else:
             return False
 
