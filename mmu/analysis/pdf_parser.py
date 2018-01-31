@@ -156,10 +156,11 @@ class CustomPDFParser:
                             role = ""
                             temp_name = ""
                     elif '***' in line and role:
-                        name = line.replace("***", "").strip()
-                        if name:
-                            persons.append({'role': Helper.format_role(role),
-                                            'name': Helper.normalize_greek_name(name)})
+                        name = Helper.normalize_greek_name(line.replace("***", "").strip())
+                        role = Helper.format_role(role)
+                        if name and role:
+                            persons.append({'role': role,
+                                            'name': name})
                             role = ""
                     elif '***' in line and not role and not temp_name:
                         temp_name = line.replace("***", "")
