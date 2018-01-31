@@ -66,6 +66,15 @@ class PdfParserTest(unittest.TestCase):
         self.assertEqual(regulation['number'], '4388')
         self.assertEqual(regulation['type'], 'NOMOΣ ΥΠ’ ΑΡΙΘΜ.')
 
+    def test_2_regulation_types(self):
+      correct_names = ['ΠΡΟΚΟΠΙΟΣ Β ΠΑΥΛΟΠΟΥΛΟΣ', 'ΝΙΚΟΛΑΟΣ ΤΟΣΚΑΣ']
+      file_path = self.get_file_path("ΦΕΚ A 14 - 05.02.2016.pdf");
+
+      regulations = self.parser.get_signatures_from_pdf(file_path, str(2016))
+
+      self.assertEqual(self.get_names_from_regulation(regulations[0]), correct_names)
+
+
     # Helper method to get all names from a single signature set
     def get_names_from_regulation(self, regulation):
         names = []
