@@ -32,7 +32,7 @@ class CustomPDFParser:
         self.__illegal_chars = re.compile(r"\d+")
 
         # char_margin=4, word_margin=0.25, all_texts=True
-        self.laparams = LAParams(line_overlap=0, char_margin=0.01)
+        self.laparams = LAParams(line_overlap=2, char_margin=0.5, detect_vertical=False, all_texts=False)
 
     def get_pdf_text(self, file_name):
         try:
@@ -124,6 +124,8 @@ class CustomPDFParser:
             # Save the data found
             search_active = False
             persons = []
+            names = []
+            roles = []
             role = ""
             temp_name = ""
 
@@ -131,10 +133,16 @@ class CustomPDFParser:
                 line = line.strip()
                 if search_active:
                     if self.is_break_point(line):
+                        for index, name in enumerate(names):
+                            current_role = roles[index] if index < len(roles) else ""
+                            persons.append({'name': name, 'role': Helper.format_role(current_role)})
+
+
                         # Continue searching at next point
                         role = ""
                         temp_name = ""
                         search_active = False
+                        
                         if persons:
                             signature_sets.append(persons)
                             persons = []
@@ -144,28 +152,20 @@ class CustomPDFParser:
                             if len(signature_sets) == len(regulations):
                                 break
 
-                    normal = Helper.normalize_greek_name(line)
-                    if  normal in ignore_words:
+                    normal_line = Helper.normalize_greek_name(line)
+
+                    if  normal_line in ignore_words:
                         continue
 
-                    if temp_name:
-                        role = line.replace("***", "")
+                    if '***' in line and normal_line:
                         if role:
-                            persons.append({'role': Helper.format_role(role),
-                                            'name': Helper.normalize_greek_name(temp_name)})
+                            roles.append(role)
                             role = ""
-                            temp_name = ""
-                    elif '***' in line and role:
-                        name = Helper.normalize_greek_name(line.replace("***", "").strip())
-                        role = Helper.format_role(role)
-                        if name and role:
-                            persons.append({'role': role,
-                                            'name': name})
-                            role = ""
-                    elif '***' in line and not role and not temp_name:
-                        temp_name = line.replace("***", "")
+
+                        names.append(normal_line)
                     else:
                         role += line
+
 
                 elif (year in line and Helper.date_match(year).match(line)) \
                         or (str(int(year) - 1) in line and Helper.date_match(str(int(year) - 1)).match(line)) \
@@ -196,6 +196,8 @@ class CustomPDFParser:
 
         try:
             for layout_object in objects:
+                if getattr(layout_object, "get_text", False):
+                    print(layout_object.get_text())
                 if isinstance(layout_object, LTTextBoxHorizontal):
                     self.in_character_sequence = False
                     # text += layout_object.get_text()
@@ -260,7 +262,7 @@ class CustomPDFParser:
 
 
                 substring = text_items[start:end]
-                matches = re.findall(r"(\d{1,4})(/[\s\w\d.]+){,4}.?\s+[Α-Ω]", substring)
+                matches = re.findall(r"(\d{1,4})(/[\s\w\d.]+){,4}\.\s+[Α-Ω]", substring)
                 for match in matches:
                     num = match[0]
                     regulation_type = plural_to_singular[current_type] if current_type in plural_to_singular \

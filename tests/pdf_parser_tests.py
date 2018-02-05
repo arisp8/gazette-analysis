@@ -11,7 +11,7 @@ class PdfParserTest(unittest.TestCase):
     def test_one_regulation_per_document(self):
         correct_signatures = [{"role": "Ο ΠΡΟΕΔΡΟΣ ΤΗΣ ΔΗΜΟΚΡΑΤΙΑΣ", "name": "ΠΡΟΚΟΠΗΣ Β ΠΑΥΛΟΠΟΥΛΟΣ"},
                       {"role": "Ο ΥΠΟΥΡΓΟΣ ΝΑΥΤΙΛΙΑΣ ΚΑΙ ΝΗΣΙΩΤΙΚΗΣ ΠΟΛΙΤΙΚΗΣ", "name": "ΘΕΟΔΩΡΟΣ ΔΡΙΤΣΑΣ"}]
-        file_path = self.get_file_path('ΦΕΚ A 1 - 12.01.2016.pdf');
+        file_path = self.get_file_path('ΦΕΚ A 1 - 12.01.2016.pdf')
         regulation = self.parser.get_signatures_from_pdf(file_path, str(2016))[0]
 
         self.assertEqual(correct_signatures, regulation['signatures'])
@@ -26,7 +26,7 @@ class PdfParserTest(unittest.TestCase):
 
 
 
-        file_path = self.get_file_path('ΦΕΚ A 12 - 01.02.2016.pdf');
+        file_path = self.get_file_path('ΦΕΚ A 12 - 01.02.2016.pdf')
         regulation = self.parser.get_signatures_from_pdf(file_path, str(2016))[0]
         names = self.get_names_from_regulation(regulation)
 
@@ -36,7 +36,7 @@ class PdfParserTest(unittest.TestCase):
 
     def test_one_regulation_per_document_3(self):
         correct_names = ['ΣΤΑΥΡΟΣ ΚΟΝΤΟΝΗΣ', 'ΓΕΩΡΓΙΟΣ ΣΤΑΘΑΚΗΣ']
-        file_path = self.get_file_path('ΦΕΚ A 132 - 06.09.2017.pdf');
+        file_path = self.get_file_path('ΦΕΚ A 132 - 06.09.2017.pdf')
         regulation = self.parser.get_signatures_from_pdf(file_path, str(2016))[0]
 
         names = self.get_names_from_regulation(regulation)
@@ -55,7 +55,7 @@ class PdfParserTest(unittest.TestCase):
                          'ΠΑΥΛΟΣ ΠΟΛΑΚΗΣ', 'ΑΡΙΣΤΕΙΔΗΣ ΜΠΑΛΤΑΣ', 'ΣΤΑΥΡΟΣ ΚΟΝΤΟΝΗΣ', 'ΕΥΚΛΕΙΔΗΣ ΤΣΑΚΑΛΩΤΟΣ',
                          'ΤΡΥΦΩΝΑΣ ΑΛΕΞΙΑΔΗΣ', 'ΓΕΩΡΓΙΟΣ ΧΟΥΛΙΑΡΑΚΗΣ', 'ΠΑΝΑΓΙΩΤΗΣ ΣΚΟΥΡΛΕΤΗΣ', 'ΙΩΑΝΝΗΣ ΤΣΙΡΩΝΗΣ',
                          'ΧΡΗΣΤΟΣ ΣΠΙΡΤΖΗΣ', 'ΘΕΟΔΩΡΟΣ ΔΡΙΤΣΑΣ', 'ΕΥΑΓΓΕΛΟΣ ΑΠΟΣΤΟΛΟΥ', 'ΝΙΚΟΛΑΟΣ ΠΑΠΠΑΣ']
-        file_path = self.get_file_path('ΦΕΚ A 93 - 27.05.2016.pdf');
+        file_path = self.get_file_path('ΦΕΚ A 93 - 27.05.2016.pdf')
         regulation = self.parser.get_signatures_from_pdf(file_path, str(2016))[0]
 
         names = self.get_names_from_regulation(regulation)
@@ -68,11 +68,64 @@ class PdfParserTest(unittest.TestCase):
 
     def test_2_regulation_types(self):
       correct_names = ['ΠΡΟΚΟΠΙΟΣ Β ΠΑΥΛΟΠΟΥΛΟΣ', 'ΝΙΚΟΛΑΟΣ ΤΟΣΚΑΣ']
-      file_path = self.get_file_path("ΦΕΚ A 14 - 05.02.2016.pdf");
+      file_path = self.get_file_path("ΦΕΚ A 14 - 05.02.2016.pdf")
 
       regulations = self.parser.get_signatures_from_pdf(file_path, str(2016))
 
-      self.assertEqual(self.get_names_from_regulation(regulations[0]), correct_names)
+      self.assertEqual(self.get_names_from_regulation(regulations[0]), correct_names) 
+
+    # Make sure no regulations are returned when parsing a document that doesn't contain relevant data
+    def test_no_regulations(self):
+      file_path = self.get_file_path("ΦΕΚ A 34 - 02.03.2016.pdf")
+
+      regulations = self.parser.get_signatures_from_pdf(file_path, str(2016))
+      self.assertEqual(regulations, None)
+
+
+    # Because church regulations are not relevant to our research, but appear in FEK issues
+    # we need to make sure we get valid meta data about the regulation type but we shouldn't extract
+    # any signatures 
+    def test_church_regulations(self):
+      file_path = self.get_file_path("ΦΕΚ A 35 - 02.03.2016.pdf")
+      expected_regulations = [
+        {'type': 'ΚΑΝΟΝΙΣΜΟΣ', 'number': '283'},
+        {'type': 'ΚΑΝΟΝΙΣΜΟΣ', 'number': '282'}
+      ]
+      regulations = self.parser.get_signatures_from_pdf(file_path, str(2016))
+      self.assertEqual(regulations, expected_regulations)
+
+    # In a pdf containing 3 presidential decrees we want to make sure we extract the correct signatures for each one
+    def test_3_regulations_of_the_same_type(self):
+      file_path = self.get_file_path("ΦΕΚ A 39 - 08.03.2016.pdf")
+      regulations = self.parser.get_signatures_from_pdf(file_path, str(2016))
+
+      # Make sure we have extracted all 3 regulations
+      self.assertEqual(len(regulations), 3)
+
+      # Now make sure one-by-one we have extracted the correct data.
+      first = regulations[0]
+      second = regulations[1]
+      third = regulations[2]
+
+      # Validate the regulation type
+      self.assertEqual(first['type'], 'ΠΡΟΕΔΡΙΚΟ ΔΙΑΤΑΓΜΑ')
+      self.assertEqual(second['type'], 'ΠΡΟΕΔΡΙΚΟ ΔΙΑΤΑΓΜΑ')
+      self.assertEqual(third['type'], 'ΠΡΟΕΔΡΙΚΟ ΔΙΑΤΑΓΜΑ')
+
+      # Validate the regulation number
+      self.assertEqual(first['number'], '24')
+      self.assertEqual(second['number'], '25')
+      self.assertEqual(third['number'], '26')
+
+      first_names = ['ΠΡΟΚΟΠΙΟΣ Β ΠΑΥΛΟΠΟΥΛΟΣ', 'ΝΙΚΟΛΑΟΣ ΤΟΣΚΑΣ', 'ΓΕΩΡΓΙΟΣ ΣΤΑΘΑΚΗΣ', 'ΠΑΝΑΓΙΩΤΗΣ ΚΑΜΜΕΝΟΣ',
+        'ΝΙΚΟΛΑΟΣ ΚΟΤΖΙΑΣ', 'ΝΙΚΟΛΑΟΣ ΠΑΡΑΣΚΕΥΟΠΟΥΛΟΣ', 'ΕΥΚΛΕΙΔΗΣ ΤΣΑΚΑΛΩΤΟΣ', 'ΧΡΗΣΤΟΣ ΣΠΙΡΤΖΗΣ',
+        'ΘΕΟΔΩΡΟΣ ΔΡΙΤΣΑΣ']
+      second_names = first_names
+      third_names = ['ΠΡΟΚΟΠΙΟΣ Β ΠΑΥΛΟΠΟΥΛΟΣ', 'ΝΙΚΟΛΑΟΣ ΠΑΡΑΣΚΕΥΟΠΟΥΛΟΣ']
+      # print(self.get_names_from_regulation(first))
+      self.assertEqual(self.get_names_from_regulation(first), first_names, msg="Names extracted from the 1st regulation are wrong")
+      self.assertEqual(self.get_names_from_regulation(second), second_names, msg="Names extracted from the 2nd regulation are wrong")
+      self.assertEqual(self.get_names_from_regulation(third), third_names, msg="Names extracted from the 3rd regulation are wrong")
 
 
     # Helper method to get all names from a single signature set
@@ -84,7 +137,7 @@ class PdfParserTest(unittest.TestCase):
         return names
 
     def get_file_path(self, file_name):
-    	return os.path.join(os.path.join(os.path.dirname(__file__), 'test_pdfs'), file_name);
+    	return os.path.join(os.path.join(os.path.dirname(__file__), 'test_pdfs'), file_name)
 
 if __name__ == '__main__':
     unittest.main()
