@@ -1,5 +1,6 @@
 import urllib
 from urllib.request import Request
+from urllib.error import URLError
 import shutil
 import urllib.parse
 import os
@@ -63,6 +64,11 @@ class Helper:
             return {}
 
     @staticmethod
+    # Downloads a file and saves to system
+    # @param url The URL to download the file from
+    # @param file_name The name to use for the saved file
+    # @param folder The folder to save the file to
+    # @return True on failure, False on success
     def download(url, file_name= None, folder = os.getcwd()):
         @staticmethod
         def get_file_name(open_request):
@@ -80,7 +86,12 @@ class Helper:
             return os.path.basename(urllib.parse.urlsplit(open_request.url)[2])
 
         request = Request(url)
-        r = urllib.request.urlopen(request)
+        try:
+            r = urllib.request.urlopen(request)
+        except URLError as e:
+            print('Download Failed.' + str(e))
+            return False
+
 
         try:
             if not file_name:
