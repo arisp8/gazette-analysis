@@ -75,6 +75,8 @@ class RawSignatureHandler(TransactionHandler):
 
     # Finds the most common role given a person's name and some conditions
     def find_most_common_role(self, conditions, person_name):
+        if not conditions:
+            conditions = {}
         conditions['person_name'] = [person_name]
         formatted_conditions = TransactionHandler.format_conditions(self, 'raw_signatures', conditions)
         query = ''' 
