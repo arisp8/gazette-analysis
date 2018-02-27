@@ -20,8 +20,10 @@ from pdfminer.layout import LTImage
 from pdfminer.layout import LTFigure
 from pdfminer.layout import LTTextBoxHorizontal
 from pdfminer.layout import LTChar
+from pdfminer.pdfparser import PDFSyntaxError
 from pdfminer.pdfpage import PDFPage
 from mmu.utility.helper import Helper
+
 
 from timeit import default_timer as timer
 
@@ -32,7 +34,7 @@ class CustomPDFParser:
         self.__illegal_chars = re.compile(r"\d+")
 
         # char_margin=4, word_margin=0.25, all_texts=True
-        self.laparams = LAParams(line_overlap=2, char_margin=0.5, detect_vertical=False, all_texts=False)
+        self.laparams = LAParams(line_overlap=2, char_margin=0.5, word_margin=0.1)
 
     def get_pdf_text(self, file_name):
         try:
@@ -90,9 +92,20 @@ class CustomPDFParser:
         pages = PDFPage.get_pages(fp, pagenos, maxpages=maxpages, password=password, caching=caching,
                                   check_extractable=True)
 
+
         temp_pages = []
-        for page in pages:
-            temp_pages.append(page)
+        try:
+            for page in pages:
+                temp_pages.append(page)
+        except PDFSyntaxError as e:
+            print(e)
+            return
+        except TypeError as e:
+            print(e)
+            return
+        except Exception as e:
+            print(e)
+            return
 
         if not temp_pages:
             return
@@ -195,9 +208,15 @@ class CustomPDFParser:
         self.in_character_sequence = False
 
         try:
+            # # For now skip images
+            # if isinstance(objects, LTImage):
+            #     return ""
+
             for layout_object in objects:
-                if getattr(layout_object, "get_text", False):
-                    print(layout_object.get_text())
+                # if getattr(layout_object, "get_text", False):
+                    # print(layout_object.get_text())
+
+
                 if isinstance(layout_object, LTTextBoxHorizontal):
                     self.in_character_sequence = False
                     # text += layout_object.get_text()
