@@ -1,3 +1,6 @@
+import os
+import sys
+sys.path.append(os.path.join(os.path.dirname(__file__), '..'))
 import unittest
 from mmu.utility.helper import Helper
 import datetime
