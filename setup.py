@@ -97,7 +97,7 @@ def download_latest_chromedriver_release():
         os.remove('drivers/chromedriver.zip')
         print('chromedriver.zip removed successfully')
 
-        os.chmod('drivers/chromedriver', 0o755)
+        os.chmod('drivers/chromedriver.exe', 0o755)
     else:
         print('Downloading chromedriver for selenium failed.')
 
