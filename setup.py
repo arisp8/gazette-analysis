@@ -1,11 +1,13 @@
 import sqlite3
-import os, errno
+import os
+import errno
 import sys
 import platform
 import zipfile
 import stat
 
-sys.path.insert(0, os.path.join(os.path.join(os.path.abspath(__file__).replace(__file__, '')), 'mmu'))
+sys.path.insert(0, os.path.join(os.path.join(
+    os.path.abspath(__file__).replace(__file__, '')), 'mmu'))
 
 from mmu.utility.helper import Helper
 
@@ -16,7 +18,8 @@ def setup():
 
         arg1 = sys.argv[1]
 
-        # if --clean_install is specified then the previous sqlite database is deleted.
+        # if --clean_install is specified then the previous sqlite
+        # database is deleted.
         if arg1 == '--clean_install':
             print("Deleting SQLite Database")
             delete_sqlite_database()
@@ -26,6 +29,7 @@ def setup():
 
     download_latest_chromedriver_release()
     # @todo: Test that everything has been set up correctly.
+
 
 def delete_sqlite_database():
     try:
@@ -65,10 +69,12 @@ def download_latest_chromedriver_release():
         print('chromedriver is already downloaded')
         return
 
-    endpoint = 'https://chromedriver.storage.googleapis.com/{version}/{file_name}'
+    endpoint = 'https://chromedriver.storage.googleapis.com/'
+        + '{version}/{file_name}'
+
     latest_release_link = 'https://chromedriver.storage.googleapis.com/LATEST_RELEASE'
     latest_version = Helper.get_url_contents(latest_release_link).strip()
-    
+
     if platform.system() == 'Linux':
         file = 'chromedriver_linux64.zip'
     elif platform.system() == 'Darwin':
@@ -96,10 +102,11 @@ def download_latest_chromedriver_release():
         print('chromedriver extracted successfully from chromedriver.zip.')
         os.remove('drivers/chromedriver.zip')
         print('chromedriver.zip removed successfully')
-		if(platform.system() == 'Windows') :
-			os.chmod('drivers/chromedriver.exe', 0o755)
-		else:
-			os.chmod('drivers/chromedriver', 0o755)
+        
+        if platform.system() == 'Windows':
+            os.chmod('drivers/chromedriver.exe', 0o755)
+        else:
+            os.chmod('drivers/chromedriver', 0o755)
     else:
         print('Downloading chromedriver for selenium failed.')
 
