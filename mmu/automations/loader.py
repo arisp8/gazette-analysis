@@ -11,7 +11,9 @@ import glob
 import os.path
 import datetime
 from http.client import RemoteDisconnected
-
+import os
+import sys 
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 from mmu.db.handlers.issue import IssueHandler
 from mmu.utility.helper import Helper
 

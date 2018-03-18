@@ -1,3 +1,6 @@
+import os
+import sys 
+sys.path.append(os.path.join(os.path.dirname(__file__), '../..'))
 from mmu.db.handlers.issue import IssueHandler
 from mmu.db.handlers.signatures import SignatureHandler
 from mmu.db.handlers.signatures import RawSignatureHandler
