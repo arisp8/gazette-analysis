@@ -70,7 +70,7 @@ def download_latest_chromedriver_release():
         return
 
     endpoint = 'https://chromedriver.storage.googleapis.com/'
-        + '{version}/{file_name}'
+    + '{version}/{file_name}'
 
     latest_release_link = 'https://chromedriver.storage.googleapis.com/LATEST_RELEASE'
     latest_version = Helper.get_url_contents(latest_release_link).strip()
