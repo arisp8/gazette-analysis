@@ -11,6 +11,7 @@ import glob
 import os.path
 import datetime
 from http.client import RemoteDisconnected
+import platform
 
 from mmu.db.handlers.issue import IssueHandler
 from mmu.utility.helper import Helper
@@ -32,9 +33,12 @@ class Loader:
         chromeOptions.add_experimental_option("prefs", prefs)
 
         # @todo: Replace hard paths with relative paths and make sure that all needed stuff is downloaded in setup
-        self.__driver = webdriver.Chrome(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "../drivers/chromedriver"),
+        if(platform.system() != 'Windows'):
+			self.__driver = webdriver.Chrome(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "../drivers/chromedriver"),
                                          chrome_options=chromeOptions)
-
+		else:
+			self.__driver = webdriver.Chrome(os.path.join(os.path.join(os.path.dirname(__file__), ".."), "../drivers/chromedriver.exe"),
+                                         chrome_options=chromeOptions)
         self.__issue_handler = IssueHandler()
 
     def file_exists(self, directory, file_name, file_extension = 'pdf'):
