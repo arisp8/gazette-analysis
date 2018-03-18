@@ -13,7 +13,7 @@ ministries are the predecessors of the current one.
 - [x] Find information about all current ministries and ministers
 - [x] Be easily updated when anything is changed
 - [x] Fetch and retrieve relevant information given a name of a politician
-- [ ] Guarantee that all singing names are extracted when parsing a pdf.
+- [ ] Guarantee that all signing names are extracted when parsing a pdf.
 - [ ] When preparing the data for analysis, use the extracted roles and the researched data to make sure the data is accurate.
 - [ ] Create tests to ensure that the correct ministry is found for each person.
 - [ ] Improve calculations about co-responsibilities.
