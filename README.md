@@ -7,6 +7,7 @@ in which 2 (or more) Greek ministries are co-signing a big percentage of aforeme
 and statistically find ministries where a merger of sorts would be beneficial.
 
 ## Getting started
-1. Clone the repository using `git clone git@github.com:arisp8/gazette-analysis.git`
+1. Clone the repository using `git clone git@github.com:arisp8/gazette-analysis.git`or 
+                              `https://github.com/arisp8/gazette-analysis.git`
 2. Install all dependencies using `pip install -r requirements.txt`
 3. While in the projects root folder run setup.py using `python setup.py`
